@@ -1,103 +1,727 @@
-import Image from "next/image";
+"use client"
 
-export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import React, { useState } from 'react';
+import { signIn } from "next-auth/react";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+const Home = () => {
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
+  const [signupState, setSignupState] = useState({
+    emailPrefix: '',
+    password: '',
+    confirmPassword: '',
+    otp: '',
+    flow: 'email-signup',
+    isLoading: false,
+    error: '',
+    success: ''
+  });
+  const [loginState, setLoginState] = useState({
+    emailPrefix: '',
+    password: '',
+    isLoading: false,
+    error: '',
+    success: ''
+  });
+
+  const bubbles = [
+    { id: 0, left: '5%', top: '10%', delay: '0s' },
+    { id: 1, left: '75%', top: '8%', delay: '0.3s' },
+    { id: 2, left: '15%', top: '35%', delay: '0.6s' },
+    { id: 3, left: '80%', top: '40%', delay: '0.9s' },
+    { id: 4, left: '10%', top: '65%', delay: '1.2s' },
+    { id: 5, left: '70%', top: '70%', delay: '1.5s' },
+    { id: 6, left: '35%', top: '15%', delay: '1.8s' },
+    { id: 7, left: '40%', top: '75%', delay: '2.1s' },
+  ];
+
+  const messageTexts = [
+    "my date drop actually has nothing in common with me. please help.",
+    "im in a relationship im experiencing severe fomo.",
+    "he literally talked about his ex the entire time.",
+    "she wouldnt stop talking about her cat tf.",
+    "my date drop ghosted me.",
+    "he just kept talking about formula 1 i wanted to die.",
+    "i just wanna meet people not date them instantly",
+    "i have a boyfriend but i want to meet people",
+  ];
+
+  const handleGetMatched = () => {
+    setShowAuth(true);
+  };
+
+  const handleCloseAuth = () => {
+    setShowAuth(false);
+    setAuthMode('signup');
+    setSignupState({
+      emailPrefix: '',
+      password: '',
+      confirmPassword: '',
+      otp: '',
+      flow: 'email-signup',
+      isLoading: false,
+      error: '',
+      success: ''
+    });
+    setLoginState({
+      emailPrefix: '',
+      password: '',
+      isLoading: false,
+      error: '',
+      success: ''
+    });
+  };
+
+  const getFullEmail = (prefix: string) => {
+    return `${prefix}@stanford.edu`;
+  };
+
+  // SIGNUP HANDLERS
+  const handleSendOTP = async () => {
+    if (!signupState.emailPrefix || !signupState.password || !signupState.confirmPassword) {
+      setSignupState(prev => ({
+        ...prev,
+        error: 'please fill in all fields.'
+      }));
+      return;
+    }
+
+    if (signupState.password.length < 8) {
+      setSignupState(prev => ({
+        ...prev,
+        error: 'password must be at least 8 characters long.'
+      }));
+      return;
+    }
+
+    if (signupState.password !== signupState.confirmPassword) {
+      setSignupState(prev => ({
+        ...prev,
+        error: 'passwords do not match.'
+      }));
+      return;
+    }
+
+    const fullEmail = getFullEmail(signupState.emailPrefix);
+
+    setSignupState(prev => ({
+      ...prev,
+      isLoading: true,
+      error: '',
+      success: ''
+    }));
+
+    try {
+      const response = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: fullEmail,
+          password: signupState.password,
+          type: "signup"
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSignupState(prev => ({
+          ...prev,
+          flow: 'otp-verification',
+          success: data.message,
+          isLoading: false
+        }));
+      } else {
+        if (data.hasGoogleAccount) {
+          setSignupState(prev => ({
+            ...prev,
+            error: 'this email is already registered with google. please sign in with google instead.',
+            isLoading: false
+          }));
+        } else {
+          setSignupState(prev => ({
+            ...prev,
+            error: data.message,
+            isLoading: false
+          }));
+        }
+      }
+    } catch (error) {
+      setSignupState(prev => ({
+        ...prev,
+        error: 'network error. please try again.',
+        isLoading: false
+      }));
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!signupState.otp || signupState.otp.length !== 6) {
+      setSignupState(prev => ({
+        ...prev,
+        error: 'please enter a valid 6-digit code.'
+      }));
+      return;
+    }
+
+    const fullEmail = getFullEmail(signupState.emailPrefix);
+
+    setSignupState(prev => ({
+      ...prev,
+      isLoading: true,
+      error: '',
+      success: ''
+    }));
+
+    try {
+      const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: fullEmail,
+          otp: signupState.otp,
+          type: "signup",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSignupState(prev => ({
+          ...prev,
+          success: data.message,
+          isLoading: false
+        }));
+
+        if (data.shouldSignIn) {
+          setTimeout(async () => {
+            await signIn("credentials", {
+              email: fullEmail,
+              password: signupState.password,
+              redirectTo: "/profile",
+            });
+          }, 1500);
+        }
+      } else {
+        setSignupState(prev => ({
+          ...prev,
+          error: data.message,
+          isLoading: false
+        }));
+      }
+    } catch (error) {
+      setSignupState(prev => ({
+        ...prev,
+        error: 'network error. please try again.',
+        isLoading: false
+      }));
+    }
+  };
+
+  const handleResendOTP = async () => {
+    const fullEmail = getFullEmail(signupState.emailPrefix);
+
+    setSignupState(prev => ({
+      ...prev,
+      isLoading: true,
+      error: '',
+      success: ''
+    }));
+
+    try {
+      const response = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: fullEmail,
+          password: signupState.password,
+          type: "signup"
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSignupState(prev => ({
+          ...prev,
+          success: 'new verification code sent!',
+          isLoading: false
+        }));
+      } else {
+        setSignupState(prev => ({
+          ...prev,
+          error: data.message,
+          isLoading: false
+        }));
+      }
+    } catch (error) {
+      setSignupState(prev => ({
+        ...prev,
+        error: 'failed to resend code. please try again.',
+        isLoading: false
+      }));
+    }
+  };
+
+  // LOGIN HANDLER
+  const handleLogin = async () => {
+    if (!loginState.emailPrefix || !loginState.password) {
+      setLoginState(prev => ({
+        ...prev,
+        error: 'please fill in all fields.'
+      }));
+      return;
+    }
+
+    const fullEmail = getFullEmail(loginState.emailPrefix);
+    const password = loginState.password;
+
+    setLoginState(prev => ({
+      ...prev,
+      isLoading: true,
+      error: '',
+      success: ''
+    }));
+
+    try {
+      const result = await signIn("credentials", {
+        email: fullEmail,
+        password: password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setLoginState(prev => ({
+          ...prev,
+          error: 'invalid credentials. please try again.',
+          isLoading: false
+        }));
+      } else if (result?.ok) {
+        setLoginState(prev => ({
+          ...prev,
+          success: 'login successful! redirecting...',
+          isLoading: false
+        }));
+
+        setTimeout(() => {
+          window.location.href = '/profile';
+        }, 1000);
+      }
+    } catch (error) {
+      setLoginState(prev => ({
+        ...prev,
+        error: 'network error. please try again.',
+        isLoading: false
+      }));
+    }
+  };
+
+  const renderSignupForm = () => {
+    if (signupState.flow === 'email-signup') {
+      return (
+        <div className="space-y-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="sunetid"
+              value={signupState.emailPrefix}
+              onChange={(e) =>
+                setSignupState(prev => ({
+                  ...prev,
+                  emailPrefix: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''),
+                  error: ''
+                }))
+              }
+              className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900 pr-32"
+              disabled={signupState.isLoading}
+              style={{ fontFamily: 'Merriweather, serif' }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <span 
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+              style={{ fontFamily: 'Merriweather, serif' }}
+            >
+              @stanford.edu
+            </span>
+          </div>
+
+          <input
+            type="password"
+            placeholder="password (min. 8 characters)"
+            value={signupState.password}
+            onChange={(e) =>
+              setSignupState(prev => ({
+                ...prev,
+                password: e.target.value,
+                error: ''
+              }))
+            }
+            className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900"
+            disabled={signupState.isLoading}
+            style={{ fontFamily: 'Merriweather, serif' }}
+          />
+
+          <input
+            type="password"
+            placeholder="confirm password"
+            value={signupState.confirmPassword}
+            onChange={(e) =>
+              setSignupState(prev => ({
+                ...prev,
+                confirmPassword: e.target.value,
+                error: ''
+              }))
+            }
+            className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900"
+            disabled={signupState.isLoading}
+            style={{ fontFamily: 'Merriweather, serif' }}
+          />
+
+          <button
+            onClick={handleSendOTP}
+            disabled={
+              signupState.isLoading ||
+              !signupState.emailPrefix ||
+              !signupState.password ||
+              !signupState.confirmPassword ||
+              signupState.password.length < 8
+            }
+            className="w-full px-8 py-3 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ fontFamily: 'Merriweather, serif' }}
           >
-            Read our docs
-          </a>
+            {signupState.isLoading ? 'sending...' : 'send verification code'}
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      );
+    }
+
+    if (signupState.flow === 'otp-verification') {
+      return (
+        <div className="space-y-4">
+          <div className="text-center mb-4">
+            <p className="text-sm text-gray-600" style={{ fontFamily: 'Merriweather, serif' }}>
+              we sent a 6-digit code to <strong>{getFullEmail(signupState.emailPrefix)}</strong>
+            </p>
+          </div>
+          <div className="flex justify-center gap-2 mb-4">
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+              <input
+                key={index}
+                type="text"
+                maxLength={1}
+                value={signupState.otp[index] || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.match(/^[0-9]$/)) {
+                    const newOtp = signupState.otp.split('');
+                    newOtp[index] = value;
+                    setSignupState(prev => ({
+                      ...prev,
+                      otp: newOtp.join(''),
+                      error: ''
+                    }));
+                    if (index < 5) {
+                      const nextInput = document.querySelector(`input[data-index="${index + 1}"]`) as HTMLInputElement;
+                      if (nextInput) nextInput.focus();
+                    }
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Backspace' && !signupState.otp[index] && index > 0) {
+                    const prevInput = document.querySelector(`input[data-index="${index - 1}"]`) as HTMLInputElement;
+                    if (prevInput) prevInput.focus();
+                  }
+                }}
+                data-index={index}
+                className="w-12 h-14 text-center text-2xl border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900"
+                disabled={signupState.isLoading}
+                style={{ fontFamily: 'Merriweather, serif' }}
+              />
+            ))}
+          </div>
+          <button
+            onClick={handleVerifyOTP}
+            disabled={signupState.isLoading || signupState.otp.length !== 6}
+            className="w-full px-8 py-3 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ fontFamily: 'Merriweather, serif' }}
+          >
+            {signupState.isLoading ? 'creating account...' : 'create account'}
+          </button>
+          <div className="flex flex-col space-y-2">
+            <button
+              onClick={handleResendOTP}
+              disabled={signupState.isLoading}
+              className="text-sm text-gray-600 hover:text-gray-800 underline"
+              style={{ fontFamily: 'Merriweather, serif' }}
+            >
+              didn't receive code? resend
+            </button>
+            <button
+              onClick={() =>
+                setSignupState(prev => ({
+                  ...prev,
+                  flow: 'email-signup',
+                  otp: '',
+                  error: '',
+                  success: ''
+                }))
+              }
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
+              style={{ fontFamily: 'Merriweather, serif' }}
+            >
+              ← back
+            </button>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  const renderLoginForm = () => {
+    return (
+      <div className="space-y-4">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="sunetid"
+            value={loginState.emailPrefix}
+            onChange={(e) =>
+              setLoginState(prev => ({
+                ...prev,
+                emailPrefix: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''),
+                error: ''
+              }))
+            }
+            className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900 pr-32"
+            disabled={loginState.isLoading}
+            style={{ fontFamily: 'Merriweather, serif' }}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          <span 
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+            style={{ fontFamily: 'Merriweather, serif' }}
+          >
+            @stanford.edu
+          </span>
+        </div>
+
+        <input
+          type="password"
+          placeholder="password"
+          value={loginState.password}
+          onChange={(e) =>
+            setLoginState(prev => ({
+              ...prev,
+              password: e.target.value,
+              error: ''
+            }))
+          }
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && loginState.emailPrefix && loginState.password) {
+              handleLogin();
+            }
+          }}
+          className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900"
+          disabled={loginState.isLoading}
+          style={{ fontFamily: 'Merriweather, serif' }}
+        />
+
+        <button
+          onClick={handleLogin}
+          disabled={
+            loginState.isLoading ||
+            !loginState.emailPrefix ||
+            !loginState.password
+          }
+          className="w-full px-8 py-3 bg-gray-800 text-white font-bold rounded-lg hover:bg-gray-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ fontFamily: 'Merriweather, serif' }}
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          {loginState.isLoading ? 'logging in...' : 'log in'}
+        </button>
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <link 
+        href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" 
+        rel="stylesheet" 
+      />
+      
+      <div className="relative w-full h-screen overflow-hidden bg-gradient-animated">
+        {bubbles.map((bubble, i) => (
+          <div
+            key={bubble.id}
+            className="absolute animate-float"
+            style={{
+              left: bubble.left,
+              top: bubble.top,
+              animationDelay: bubble.delay,
+              animationDuration: '4s',
+              fontFamily: 'Merriweather, serif',
+              maxWidth: '250px',
+              filter: showAuth ? 'blur(8px)' : 'none',
+              transition: 'filter 0.3s ease'
+            }}
+          >
+            <div className="relative backdrop-blur-md bg-white/20 shadow-lg p-4" style={{ borderRadius: '24px 24px 24px 0' }}>
+              <p className="text-gray-600 text-sm opacity-70 font-medium">
+                {messageTexts[i % messageTexts.length]}
+              </p>
+            </div>
+          </div>
+        ))}
+
+        <div 
+          className="absolute inset-0 flex flex-col items-center justify-center"
+          style={{
+            filter: showAuth ? 'blur(8px)' : 'none',
+            transition: 'filter 0.3s ease'
+          }}
         >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <h1 
+            className="text-8xl font-bold text-gray-800 tracking-tight"
+            style={{ fontFamily: 'Merriweather, serif' }}
+          >
+            plate drop
+          </h1>
+          <p 
+            className="text-xl text-gray-600 mt-6 max-w-xl text-center px-4"
+            style={{ fontFamily: 'Merriweather, serif' }}
+          >
+            meet people who actually share your interests. <br /> no pressure, no awkward dates—just real connection.
+          </p>
+          
+          <button
+            onClick={handleGetMatched}
+            className="mt-8 px-8 py-4 bg-gray-800 text-white font-bold rounded-full hover:bg-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+            style={{ fontFamily: 'Merriweather, serif' }}
+          >
+            get matched
+          </button>
+        </div>
+
+        {showAuth && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div 
+              className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+              onClick={handleCloseAuth}
+            ></div>
+            
+            <div className="relative bg-white/60 backdrop-blur-md rounded-2xl border-2 border-gray-300 shadow-2xl w-full max-w-md p-8 max-h-[90vh] overflow-y-auto">
+              <button
+                onClick={handleCloseAuth}
+                className="absolute top-2 right-4 text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+
+              <div className="flex mb-6 bg-white/20 rounded-lg p-1">
+                <button
+                  onClick={() => setAuthMode('signup')}
+                  className={`flex-1 py-2 rounded-md font-bold transition-all duration-300 ${
+                    authMode === 'signup'
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  style={{ fontFamily: 'Merriweather, serif' }}
+                >
+                  sign up
+                </button>
+                <button
+                  onClick={() => setAuthMode('login')}
+                  className={`flex-1 py-2 rounded-md font-bold transition-all duration-300 ${
+                    authMode === 'login'
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                  style={{ fontFamily: 'Merriweather, serif' }}
+                >
+                  log in
+                </button>
+              </div>
+
+              <div className="text-center mb-6">
+                <h2 
+                  className="text-4xl font-bold text-gray-800 mb-2"
+                  style={{ fontFamily: 'Merriweather, serif' }}
+                >
+                  {authMode === 'signup' ? 'start connecting' : 'welcome back'}
+                </h2>
+                <p 
+                  className="text-gray-600"
+                  style={{ fontFamily: 'Merriweather, serif' }}
+                >
+                  {authMode === 'signup' 
+                    ? 'create your account to get matched' 
+                    : 'log in to continue your journey'}
+                </p>
+              </div>
+
+              {authMode === 'signup' && signupState.error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm" style={{ fontFamily: 'Merriweather, serif' }}>
+                  {signupState.error}
+                </div>
+              )}
+              {authMode === 'signup' && signupState.success && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm" style={{ fontFamily: 'Merriweather, serif' }}>
+                  {signupState.success}
+                </div>
+              )}
+              {authMode === 'login' && loginState.error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm" style={{ fontFamily: 'Merriweather, serif' }}>
+                  {loginState.error}
+                </div>
+              )}
+              {authMode === 'login' && loginState.success && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm" style={{ fontFamily: 'Merriweather, serif' }}>
+                  {loginState.success}
+                </div>
+              )}
+
+              {authMode === 'signup' ? renderSignupForm() : renderLoginForm()}
+
+              <p className="text-xs text-gray-500 text-center mt-6" style={{ fontFamily: 'Merriweather, serif' }}>
+                by continuing, you agree to our terms of service and privacy policy
+              </p>
+            </div>
+          </div>
+        )}
+
+        <style>{`
+          @keyframes float {
+            0%, 100% {
+              transform: translateY(0px);
+            }
+            50% {
+              transform: translateY(-20px);
+            }
+          }
+          
+          .animate-float {
+            animation: float 6s ease-in-out infinite;
+          }
+
+          @keyframes gradientShift {
+            0% {
+              background-position: 0% 50%;
+            }
+            50% {
+              background-position: 100% 50%;
+            }
+            100% {
+              background-position: 0% 50%;
+            }
+          }
+          
+          .bg-gradient-animated {
+            background: linear-gradient(135deg, #dbeafe, #e9d5ff, #fae8ff, #ddd6fe, #bfdbfe);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+          }
+        `}</style>
+      </div>
+    </>
   );
-}
+};
+
+export default Home;
