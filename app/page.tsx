@@ -26,23 +26,23 @@ const Home = () => {
 
   const bubbles = [
     { id: 0, left: '5%', top: '10%', delay: '0s' },
-    { id: 1, left: '75%', top: '8%', delay: '0.3s' },
-    { id: 2, left: '15%', top: '35%', delay: '0.6s' },
-    { id: 3, left: '80%', top: '40%', delay: '0.9s' },
-    { id: 4, left: '10%', top: '65%', delay: '1.2s' },
+    { id: 1, left: '30%', top: '20%', delay: '0.3s' },
+    { id: 2, left: '10%', top: '65%', delay: '0.6s' },
+    { id: 3, left: '35%', top: '77%', delay: '0.9s' },
+    { id: 4, left: '10%', top: '50%', delay: '1.2s' },
     { id: 5, left: '70%', top: '70%', delay: '1.5s' },
-    { id: 6, left: '35%', top: '15%', delay: '1.8s' },
-    { id: 7, left: '40%', top: '75%', delay: '2.1s' },
+    { id: 6, left: '80%', top: '15%', delay: '1.8s' },
+    { id: 7, left: '75%', top: '40%', delay: '2.1s' },
   ];
 
   const messageTexts = [
     "my date drop actually has nothing in common with me. please help.",
     "im in a relationship im experiencing severe fomo.",
-    "he literally talked about his ex the entire time.",
+    "i just wanna meet people not date them instantly",
     "she wouldnt stop talking about her cat tf.",
     "my date drop ghosted me.",
     "he just kept talking about formula 1 i wanted to die.",
-    "i just wanna meet people not date them instantly",
+    "he literally talked about his ex the entire time.",
     "i have a boyfriend but i want to meet people",
   ];
 
@@ -198,7 +198,7 @@ const Home = () => {
             await signIn("credentials", {
               email: fullEmail,
               password: signupState.password,
-              redirectTo: "/profile",
+              redirect: false,
             });
           }, 1500);
         }
@@ -547,45 +547,54 @@ const Home = () => {
         rel="stylesheet" 
       />
       
-      <div className="relative w-full h-screen overflow-hidden bg-gradient-animated">
-        {bubbles.map((bubble, i) => (
-          <div
-            key={bubble.id}
-            className="absolute animate-float"
-            style={{
-              left: bubble.left,
-              top: bubble.top,
-              animationDelay: bubble.delay,
-              animationDuration: '4s',
-              fontFamily: 'Merriweather, serif',
-              maxWidth: '250px',
-              filter: showAuth ? 'blur(8px)' : 'none',
-              transition: 'filter 0.3s ease'
-            }}
-          >
-            <div className="relative backdrop-blur-md bg-white/20 shadow-lg p-4" style={{ borderRadius: '24px 24px 24px 0' }}>
-              <p className="text-gray-600 text-sm opacity-70 font-medium">
-                {messageTexts[i % messageTexts.length]}
-              </p>
+      <div className="relative w-full h-screen overflow-hidden bg-gradient-animated" style={{ paddingTop: 'max(0px, env(safe-area-inset-top))', paddingBottom: 'max(0px, env(safe-area-inset-bottom))', paddingLeft: 'max(0px, env(safe-area-inset-left))', paddingRight: 'max(0px, env(safe-area-inset-right))', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+        {bubbles.map((bubble, i) => {
+          const messageIndex = i % messageTexts.length;
+          
+          return (
+            <div
+              key={bubble.id}
+              className={`absolute animate-float ${i >= 4 ? 'hidden md:block' : ''}`}
+              style={{
+                left: bubble.left,
+                top: bubble.top,
+                animationDelay: bubble.delay,
+                animationDuration: '4s',
+                fontFamily: 'Merriweather, serif',
+                maxWidth: '250px',
+                filter: showAuth ? 'blur(8px)' : 'none',
+                transition: 'filter 0.3s ease',
+                width: '250px'
+              }}
+            >
+              <div className="relative backdrop-blur-md bg-white/20 shadow-lg p-4" style={{ borderRadius: '24px 24px 24px 0' }}>
+                <p className="text-gray-600 text-xs opacity-70 font-medium">
+                  {messageTexts[messageIndex]}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <div 
           className="absolute inset-0 flex flex-col items-center justify-center"
           style={{
             filter: showAuth ? 'blur(8px)' : 'none',
-            transition: 'filter 0.3s ease'
+            transition: 'filter 0.3s ease',
+            paddingTop: 'max(0px, env(safe-area-inset-top))',
+            paddingBottom: 'max(0px, env(safe-area-inset-bottom))',
+            paddingLeft: 'max(0px, env(safe-area-inset-left))',
+            paddingRight: 'max(0px, env(safe-area-inset-right))'
           }}
         >
           <h1 
-            className="text-8xl font-bold text-gray-800 tracking-tight"
+            className="text-6xl sm:text-7xl md:text-8xl font-bold text-gray-800 tracking-tight whitespace-nowrap"
             style={{ fontFamily: 'Merriweather, serif' }}
           >
             plate drop
           </h1>
           <p 
-            className="text-xl text-gray-600 mt-6 max-w-xl text-center px-4"
+            className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mt-6 max-w-4xl text-center px-4"
             style={{ fontFamily: 'Merriweather, serif' }}
           >
             meet people who actually share your interests. <br /> no pressure, no awkward dates—just real connection.
@@ -601,7 +610,7 @@ const Home = () => {
         </div>
 
         {showAuth && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))', paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>
             <div 
               className="absolute inset-0 bg-black/30 backdrop-blur-sm"
               onClick={handleCloseAuth}
@@ -642,7 +651,7 @@ const Home = () => {
 
               <div className="text-center mb-6">
                 <h2 
-                  className="text-4xl font-bold text-gray-800 mb-2"
+                  className="text-3xl font-bold text-gray-800 mb-2"
                   style={{ fontFamily: 'Merriweather, serif' }}
                 >
                   {authMode === 'signup' ? 'start connecting' : 'welcome back'}
@@ -679,10 +688,6 @@ const Home = () => {
               )}
 
               {authMode === 'signup' ? renderSignupForm() : renderLoginForm()}
-
-              <p className="text-xs text-gray-500 text-center mt-6" style={{ fontFamily: 'Merriweather, serif' }}>
-                by continuing, you agree to our terms of service and privacy policy
-              </p>
             </div>
           </div>
         )}
