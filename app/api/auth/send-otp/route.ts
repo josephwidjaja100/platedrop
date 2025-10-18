@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json(
-        { success: false, message: 'Valid email is required' },
+        { success: false, message: 'valid email is required' },
         { status: 400 }
       );
     }
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     if (type === 'signup') {
       if (!password || !isValidPassword(password)) {
         return NextResponse.json(
-          { success: false, message: 'Password must be at least 8 characters long and contain at least one letter and one number' },
+          { success: false, message: 'password must be at least 8 characters long and contain at least one letter and one number' },
           { status: 400 }
         );
       }
@@ -31,8 +31,6 @@ export async function POST(request: NextRequest) {
     await client.connect();
     const db = client.db('platedrop');
     const otpCollection = db.collection('otps');
-
-    console.log("we're all good here");
 
     // Check if user already exists
     const existingUser = await getUserByEmail(sanitizedEmail);
@@ -45,9 +43,9 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              message: 'This email is already registered with Google. Please sign in with Google instead.',
+              message: 'this email is already registered with Google. please sign in with Google instead.',
               hasGoogleAccount: true
-            },
+            }, 
             { status: 409 }
           );
         }
@@ -55,7 +53,7 @@ export async function POST(request: NextRequest) {
         // Check if user already has email/password setup
         if (existingUser.emailPassword?.emailVerified) {
           return NextResponse.json(
-            { success: false, message: 'An account with this email already exists. Please sign in instead.' },
+            { success: false, message: 'an account with this email already exists. please sign in instead.' },
             { status: 409 }
           );
         }
@@ -63,7 +61,7 @@ export async function POST(request: NextRequest) {
     } else if (type === 'password-reset') {
       if (!existingUser || !existingUser.emailPassword) {
         return NextResponse.json(
-          { success: false, message: 'No account found with this email address.' },
+          { success: false, message: 'no account found with this email address.' },
           { status: 404 }
         );
       }
@@ -76,7 +74,7 @@ export async function POST(request: NextRequest) {
       // Check if max attempts reached
       if (existingOTP.attempts >= 15) {
         return NextResponse.json(
-          { success: false, message: 'Maximum OTP requests reached. Please wait for the current OTP to expire before requesting a new one.' },
+          { success: false, message: 'maximum OTP requests reached. please wait for the current OTP to expire before requesting a new one.' },
           { status: 429 }
         );
       }
@@ -86,13 +84,13 @@ export async function POST(request: NextRequest) {
       if (timeSinceLastRequest < 30 * 1000) {
         const remainingTime = Math.ceil((30 * 1000 - timeSinceLastRequest) / 1000);
         return NextResponse.json(
-          { success: false, message: `Please wait ${remainingTime} seconds before requesting another OTP.` },
+          { success: false, message: `please wait ${remainingTime} seconds before requesting another OTP.` },
           { status: 429 }
         );
       }
 
       // Increment attempts
-      // await otpCollection.updateOne(
+      // await ..updateOne(
       //   { _id: existingOTP._id },
       //   { $inc: { attempts: 1 } }
       // );
@@ -136,20 +134,20 @@ export async function POST(request: NextRequest) {
       // Clean up OTP document if email failed
       await otpCollection.deleteOne({ _id: otpDoc._id });
       return NextResponse.json(
-        { success: false, message: 'Failed to send verification email. Please try again.' },
+        { success: false, message: 'failed to send verification email. please try again.' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: `Verification code sent to ${sanitizedEmail}`,
+      message: `verification code sent to ${sanitizedEmail}`,
     });
 
   } catch (error) {
-    console.error('Error sending OTP:', error);
+    console.error('error sending OTP:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'internal server error' },
       { status: 500 }
     );
   }

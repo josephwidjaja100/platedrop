@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState, useRef } from 'react';
-import { Instagram, Music, Utensils, Dumbbell, Palette, Coffee, X, Plus, User } from 'lucide-react';
+import PageSelector from '../../components/PageSelector';
+import { Instagram, Music, Utensils, Dumbbell, Palette, Coffee, X, Plus, User, Laugh } from 'lucide-react';
 
 const Profile = () => {
   const [editingSection, setEditingSection] = useState(null);
@@ -81,8 +82,8 @@ const Profile = () => {
     },
     { 
       id: 'activity', 
-      title: 'favorite activity', 
-      icon: Dumbbell,
+      title: 'ideal plate', 
+      icon: Laugh,
       gridClass: 'col-span-2 row-span-1',
     }
   ];
@@ -247,7 +248,7 @@ const Profile = () => {
                 ))
               ) : (
                 <span className="px-3 py-1.5 rounded-full text-sm text-gray-400 font-medium tag-gradient">
-                  matching with ppl
+                  matching with plates
                 </span>
               )}
             </div>
@@ -273,7 +274,7 @@ const Profile = () => {
         case 'food':
           return <p className={`text-base leading-relaxed break-words whitespace-pre-wrap ${profile.food ? 'text-gray-800' : 'text-gray-400'}`}>{profile.food || 'plate food'}</p>;
         case 'activity':
-          return <p className={`text-base leading-relaxed break-words whitespace-pre-wrap ${profile.activity ? 'text-gray-800' : 'text-gray-400'}`}>{profile.activity || 'going on plate drop plates'}</p>;
+          return <p className={`text-base leading-relaxed break-words whitespace-pre-wrap ${profile.activity ? 'text-gray-800' : 'text-gray-400'}`}>{profile.activity || 'going to restaurant (with plate)'}</p>;
         default:
           return null;
       }
@@ -354,7 +355,7 @@ const Profile = () => {
                     }
                   }}
                   onKeyPress={(e) => e.key === 'Enter' && addInterestTag()}
-                  placeholder="add an interest"
+                  placeholder="cooking, rock climbing, origami..."
                   className="flex-1 px-4 py-3 pr-16 border-2 border-gray-400/40 rounded-lg transition-all duration-200 focus:outline-none focus:border-gray-700 text-gray-900 text-base bg-white hover:border-gray-400/60"
                 />
                 <div className="absolute -bottom-1 right-18 transform -translate-y-1/2 text-xs text-gray-600">
@@ -405,7 +406,7 @@ const Profile = () => {
                     }
                   }}
                   onKeyPress={(e) => e.key === 'Enter' && addLookingForTag()}
-                  placeholder="add a type"
+                  placeholder="chill person, gym bro, caffeine addict..."
                   className="flex-1 px-4 py-3 pr-16 border-2 border-gray-400/40 rounded-lg transition-all duration-200 focus:outline-none focus:border-gray-700 text-gray-900 text-base bg-white hover:border-gray-400/60"
                 />
                 <div className="absolute -bottom-1 right-18 transform -translate-y-1/2 text-xs text-gray-600">
@@ -449,7 +450,7 @@ const Profile = () => {
               ref={el => textareaRefs.current['music'] = el}
               value={editValues.music}
               onChange={(e) => handleTextareaChange('music', e.target.value, (val) => setEditValues({...editValues, music: val}), charLimits.music)}
-              placeholder="favorite artists"
+              placeholder="favorite artists..."
               className="w-full px-4 py-3 border-2 border-gray-400/40 rounded-lg transition-all duration-200 focus:outline-none focus:border-gray-700 text-gray-900 text-base bg-white resize-none hover:border-gray-400/60 overflow-hidden"
               style={{ minHeight: '24px', maxHeight: '100px' }}
             />
@@ -466,7 +467,7 @@ const Profile = () => {
               ref={el => textareaRefs.current['food'] = el}
               value={editValues.food}
               onChange={(e) => handleTextareaChange('food', e.target.value, (val) => setEditValues({...editValues, food: val}), charLimits.food)}
-              placeholder="favorite foods"
+              placeholder="favorite foods..."
               className="w-full px-4 py-3 border-2 border-gray-400/40 rounded-lg transition-all duration-200 focus:outline-none focus:border-gray-700 text-gray-900 text-base bg-white resize-none hover:border-gray-400/60 overflow-hidden"
               style={{ minHeight: '24px', maxHeight: '100px' }}
             />
@@ -483,7 +484,7 @@ const Profile = () => {
               ref={el => textareaRefs.current['activity'] = el}
               value={editValues.activity}
               onChange={(e) => handleTextareaChange('activity', e.target.value, (val) => setEditValues({...editValues, activity: val}), charLimits.activity)}
-              placeholder="favorite activities"
+              placeholder="i want to ______ with my plate..."
               className="w-full px-4 py-3 border-2 border-gray-400/40 rounded-lg transition-all duration-200 focus:outline-none focus:border-gray-700 text-gray-900 text-base bg-white resize-none hover:border-gray-400/60 overflow-hidden"
               style={{ minHeight: '24px', maxHeight: '100px' }}
             />
@@ -514,7 +515,11 @@ const Profile = () => {
             transformOrigin: 'center center'
           }}
         >
-          <div className="w-full max-w-4xl mx-auto md:max-w-sm lg:max-w-lg xl:max-w-xl px-safe">
+          <div className="w-full max-w-4xl mx-auto md:max-w-sm lg:max-w-lg xl:max-w-xl px-safe relative">
+            {/* Minimalist PageSelector, top left, desktop only */}
+            <div className="hidden md:flex flex-col items-center justify-center absolute left-0 top-0 h-full z-30">
+              <PageSelector />
+            </div>
             <div className="text-center mb-4 md:mb-8 mt-4 md:mt-0">
               <h1 className="text-2xl md:text-4xl font-bold text-gray-900">your profile</h1>
               <p className="text-gray-700 mt-2 md:mt-3 text-xs md:text-base">click any section to edit</p>

@@ -201,6 +201,10 @@ const Home = () => {
               redirect: false,
             });
           }, 1500);
+
+          setTimeout(() => {
+            window.location.href = '/profile';
+          }, 1000);
         }
       } else {
         setSignupState(prev => ({
@@ -423,12 +427,54 @@ const Home = () => {
                       const nextInput = document.querySelector(`input[data-index="${index + 1}"]`) as HTMLInputElement;
                       if (nextInput) nextInput.focus();
                     }
-                  }
+                  } 
+                  // else if (value === '') {
+                  //   // Handle backspace - clear current position
+                  //   const newOtp = signupState.otp.split('');
+                  //   newOtp[index] = '';
+                  //   setSignupState(prev => ({
+                  //     ...prev,
+                  //     otp: newOtp.join(''),
+                  //     error: ''
+                  //   }));
+                  // }
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Backspace' && !signupState.otp[index] && index > 0) {
-                    const prevInput = document.querySelector(`input[data-index="${index - 1}"]`) as HTMLInputElement;
-                    if (prevInput) prevInput.focus();
+                  if (e.key === 'Backspace') {
+                    if (signupState.otp[index]) {
+                      e.preventDefault();
+                      const newOtp = signupState.otp.split('');
+                      newOtp[index] = '';
+                      setSignupState(prev => ({
+                        ...prev,
+                        otp: newOtp.join(''),
+                        error: ''
+                      }));
+                    } 
+                    if (index > 0) {
+                      // If current field is empty, move to previous field
+                      const prevInput = document.querySelector(`input[data-index="${index - 1}"]`) as HTMLInputElement;
+                      if (prevInput) {
+                        prevInput.focus();
+                      }
+                    }
+                  }
+                  if (e.key === 'ArrowLeft') {
+                    if (index > 0) {
+                      // If current field is empty, move to previous field
+                      const prevInput = document.querySelector(`input[data-index="${index - 1}"]`) as HTMLInputElement;
+                      if (prevInput) {
+                        prevInput.focus();
+                      }
+                    }
+                  }
+                  if (e.key === 'ArrowRight') {
+                    if (index < 5) {
+                      const nextInput = document.querySelector(`input[data-index="${index + 1}"]`) as HTMLInputElement;
+                      if (nextInput) {
+                        nextInput.focus();
+                      }
+                    }
                   }
                 }}
                 data-index={index}

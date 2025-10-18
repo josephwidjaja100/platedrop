@@ -9,14 +9,14 @@ export async function POST(request: NextRequest) {
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json(
-        { success: false, message: 'Valid email is required' },
+        { success: false, message: 'valid email is required' },
         { status: 400 }
       );
     }
 
     if (!otp || otp.length !== 6) {
       return NextResponse.json(
-        { success: false, message: 'Valid 6-digit code is required' },
+        { success: false, message: 'valid 6-digit code is required' },
         { status: 400 }
       );
     }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     if (!otpDoc) {
       return NextResponse.json(
-        { success: false, message: 'Invalid or expired verification code' },
+        { success: false, message: 'invalid or expired verification code' },
         { status: 400 }
       );
     }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (otpDoc.attempts >= otpDoc.maxAttempts) {
       await otpCollection.deleteOne({ _id: otpDoc._id });
       return NextResponse.json(
-        { success: false, message: 'Too many failed attempts. Please request a new code.' },
+        { success: false, message: 'too many failed attempts. please request a new code.' },
         { status: 429 }
       );
     }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         { $inc: { attempts: 1 } }
       );
       return NextResponse.json(
-        { success: false, message: 'Invalid verification code' },
+        { success: false, message: 'invalid verification code' },
         { status: 400 }
       );
     }
@@ -76,26 +76,26 @@ export async function POST(request: NextRequest) {
       // Clean up OTP
       await otpCollection.deleteOne({ _id: otpDoc._id });
 
-      console.log(`Account ${isNew ? 'created' : 'updated'} successfully`);
+      console.log(`account ${isNew ? 'created' : 'updated'} successfully`);
 
       return NextResponse.json({
         success: true,
-        message: 'Account created successfully',
+        message: 'account created successfully',
         shouldSignIn: true,
       });
 
     } else if (type === 'password-reset') {
       return NextResponse.json({
         success: true,
-        message: 'Code verified successfully',
+        message: 'code verified successfully',
         resetToken: otpDoc._id.toString(),
       });
     }
 
   } catch (error) {
-    console.error('Error verifying OTP:', error);
+    console.error('error verifying OTP:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'internal server error' },
       { status: 500 }
     );
   }
