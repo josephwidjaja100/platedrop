@@ -1,8 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from 'react';
-import PageSelector from '../../components/PageSelector';
-import { Instagram, Music, Utensils, Dumbbell, Palette, Coffee, X, Plus, User, Laugh } from 'lucide-react';
+import { Instagram, Music, Utensils, Dumbbell, Palette, Coffee, X, Plus, User, Laugh, Camera, Upload } from 'lucide-react';
 
 const Profile = () => {
   const [editingSection, setEditingSection] = useState(null);
@@ -12,13 +11,14 @@ const Profile = () => {
   const containerRef = useRef(null);
   const sectionRefs = useRef({});
   const textareaRefs = useRef({});
+  const fileInputRef = useRef(null);
 
   const [profile, setProfile] = useState({
     name: '',
     year: '',
     major: '',
     instagram: '',
-    bio: '',
+    photo: null,
     interests: [],
     lookingFor: [],
     music: '',
@@ -29,7 +29,6 @@ const Profile = () => {
   const [editValues, setEditValues] = useState({});
 
   const charLimits = {
-    bio: 200,
     music: 50,
     food: 50,
     activity: 100,
@@ -45,9 +44,9 @@ const Profile = () => {
       gridClass: 'col-span-1 row-span-1',
     },
     { 
-      id: 'bio', 
-      title: 'about me', 
-      icon: Coffee,
+      id: 'photo', 
+      title: 'photo', 
+      icon: Camera,
       gridClass: 'col-span-1 row-span-2',
     },
     { 
@@ -115,7 +114,7 @@ const Profile = () => {
       year: profile.year,
       major: profile.major,
       instagram: profile.instagram,
-      bio: profile.bio,
+      photo: profile.photo,
       interests: [...profile.interests],
       lookingFor: [...profile.lookingFor],
       music: profile.music,
@@ -124,13 +123,11 @@ const Profile = () => {
     });
 
     setEditingSection(section.id);
-    // If this is the 'activity' section and on mobile, scroll it into view smoothly
+    
     if (isMobile && section.id === 'activity') {
-      // Use scrollIntoView on the element; center it in the viewport
       try {
         sectionEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
       } catch (e) {
-        // fallback: adjust container scrollTop
         if (containerRef.current && typeof containerRef.current.scrollTo === 'function') {
           const rect = sectionEl.getBoundingClientRect();
           const containerRect = containerRef.current.getBoundingClientRect();
@@ -139,8 +136,9 @@ const Profile = () => {
         }
       }
     }
+    
     setTimeout(() => {
-      if (['bio', 'music', 'food', 'activity'].includes(section.id)) {
+      if (['music', 'food', 'activity'].includes(section.id)) {
         adjustTextareaHeight(section.id);
       }
     }, 0);
@@ -159,6 +157,30 @@ const Profile = () => {
     setZoomTransform({ scale: 1, x: 0, y: 0 });
     setNewInterestTag('');
     setNewLookingForTag('');
+  };
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditValues({
+          ...editValues,
+          photo: reader.result
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setEditValues({
+      ...editValues,
+      photo: null
+    });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const addInterestTag = () => {
@@ -226,6 +248,23 @@ const Profile = () => {
               </p>
             </div>
           );
+        case 'photo':
+          return (
+            <div className="w-full h-full flex items-center justify-center">
+              {profile.photo ? (
+                <img 
+                  src={profile.photo} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover rounded-lg"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-gray-400 gap-2">
+                  <Camera size={32} />
+                  <p className="text-base text-center">add a photo</p>
+                </div>
+              )}
+            </div>
+          );
         case 'instagram':
           return (
             <p className="text-base">
@@ -235,8 +274,6 @@ const Profile = () => {
               </span>
             </p>
           );
-        case 'bio':
-          return <p className={`text-base leading-relaxed ${profile.bio ? 'text-gray-800' : 'text-gray-400'}`}>{profile.bio || 'plate drop > date drop'}</p>;
         case 'interests':
           return (
             <div className="flex flex-wrap gap-2">
@@ -308,6 +345,47 @@ const Profile = () => {
           </div>
         );
       
+      case 'photo':
+        return (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+            {editValues.photo ? (
+              <div className="relative w-full h-full">
+                <img 
+                  src={editValues.photo} 
+                  alt="Profile preview" 
+                  className="w-full h-full object-cover rounded-lg"
+                />
+                <button
+                  onClick={handleRemovePhoto}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  id="photo-upload"
+                />
+                <label
+                  htmlFor="photo-upload"
+                  className="flex flex-col items-center justify-center gap-3 cursor-pointer w-full h-full border-2 border-dashed border-gray-400/60 rounded-lg hover:border-gray-700 hover:bg-white/30 transition-all"
+                >
+                  <Upload size={32} className="text-gray-600" />
+                  <p className="text-sm text-gray-700 font-medium text-center px-4">
+                    click to upload photo
+                  </p>
+                </label>
+              </>
+            )}
+          </div>
+        );
+      
       case 'instagram':
         return (
           <div className="relative w-full">
@@ -321,23 +399,6 @@ const Profile = () => {
               placeholder="username"
               className="w-full pl-8 pr-4 py-3 border-2 border-gray-400/40 rounded-lg transition-all duration-200 focus:outline-none focus:border-gray-700 text-gray-900 text-base bg-white hover:border-gray-400/60 placeholder-gray-400"
             />
-          </div>
-        );
-      
-      case 'bio':
-        return (
-          <div className="space-y-2 w-full relative">
-            <textarea
-              ref={el => textareaRefs.current['bio'] = el}
-              value={editValues.bio}
-              onChange={(e) => handleTextareaChange('bio', e.target.value, (val) => setEditValues({...editValues, bio: val}), charLimits.bio)}
-              placeholder="tell us about yourself..."
-              className="w-full px-4 py-3 border-2 border-gray-400/40 rounded-lg transition-all duration-200 focus:outline-none focus:border-gray-700 text-gray-900 resize-none text-base bg-white hover:border-gray-400/60 overflow-hidden"
-              style={{ minHeight: '60px' }}
-            />
-            <div className="absolute bottom-5 right-2 text-xs text-gray-600">
-              {editValues.bio.length} / {charLimits.bio}
-            </div>
           </div>
         );
       
@@ -516,10 +577,6 @@ const Profile = () => {
           }}
         >
           <div className="w-full max-w-4xl mx-auto md:max-w-sm lg:max-w-lg xl:max-w-xl px-safe relative">
-            {/* Minimalist PageSelector, top left, desktop only */}
-            <div className="hidden md:flex flex-col items-center justify-center absolute left-0 top-0 h-full z-30">
-              <PageSelector />
-            </div>
             <div className="text-center mb-4 md:mb-8 mt-4 md:mt-0">
               <h1 className="text-2xl md:text-4xl font-bold text-gray-900">your profile</h1>
               <p className="text-gray-700 mt-2 md:mt-3 text-xs md:text-base">click any section to edit</p>
