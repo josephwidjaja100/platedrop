@@ -85,7 +85,7 @@ export default function OtpChatEmail({ email = 'user@example.com', otpCode = '65
                 }}
               />
               <Text style={{ margin: '0', color: '#94a3b8', fontSize: '14px', fontFamily: 'Georgia, "Times New Roman", serif' }}>
-                plate drop
+                looksmatr
               </Text>
             </td>
           </tr>

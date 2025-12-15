@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "plate drop",
-  description: "date drop for platonic matches",
+  title: "looksmatr",
+  description: "get matched with people who are as hot as you",
 };
 
 export default function RootLayout({

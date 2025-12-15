@@ -36,14 +36,14 @@ const Home = () => {
   ];
 
   const messageTexts = [
-    "my date drop actually has nothing in common with me. please help.",
-    "im in a relationship im experiencing severe fomo.",
-    "i just wanna meet people not date them instantly",
-    "she wouldnt stop talking about her cat tf.",
-    "my date drop ghosted me.",
-    "he just kept talking about formula 1 i wanted to die.",
-    "he literally talked about his ex the entire time.",
-    "i have a boyfriend but i want to meet people",
+    "my date drop is so mid. please help.",
+    "im just not gonna reply to him he's not my type.",
+    "bro she looks like a model i have no chance",
+    "he looks like he would go varsity in calculus",
+    "my date drop ghosted me fml.",
+    "gotta wait till next week ig",
+    "he literally has a mullet",
+    "he's literally the most stereotypical abb looking guy",
   ];
 
   const handleGetMatched = () => {
@@ -637,13 +637,13 @@ const Home = () => {
             className="text-6xl sm:text-7xl md:text-8xl font-bold text-gray-800 tracking-tight whitespace-nowrap"
             style={{ fontFamily: 'Merriweather, serif' }}
           >
-            plate drop
+            looks matter.
           </h1>
           <p 
             className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mt-6 max-w-4xl text-center px-4"
             style={{ fontFamily: 'Merriweather, serif' }}
           >
-            meet people who actually share your interests. <br /> no pressure, no awkward dates—just real connection.
+            get a date who's actually as attractive as you
           </p>
           
           <button
