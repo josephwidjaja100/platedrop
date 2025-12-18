@@ -10,14 +10,34 @@ import { validateProfileDataWithImage } from '@/lib/validation/userProfile-valid
 
 const Profile = () => {
   const { data: session, status } = useSession();
-  const [editingSection, setEditingSection] = useState(null);
+  type ProfileData = {
+    name: string;
+    year: string;
+    major: string;
+    instagram: string;
+    photo: string | null;
+    gender: string;
+    ethnicity: string[];
+    lookingForGender: string[];
+    lookingForEthnicity: string[];
+  };
+
+  type Section = {
+    id: string;
+    title: string;
+    icon?: any;
+    gridClass: string;
+    estimatedExpandedHeight: number;
+  };
+
+  const [editingSection, setEditingSection] = useState<string | null>(null);
   const [zoomTransform, setZoomTransform] = useState({ scale: 1, x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
-  const containerRef = useRef(null);
-  const sectionRefs = useRef({});
-  const fileInputRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -29,7 +49,7 @@ const Profile = () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<ProfileData>({
     name: '',
     year: '',
     major: '',
@@ -41,8 +61,18 @@ const Profile = () => {
     lookingForEthnicity: []
   });
 
-  const [editValues, setEditValues] = useState({});
-  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [editValues, setEditValues] = useState<ProfileData>({
+    name: '',
+    year: '',
+    major: '',
+    instagram: '',
+    photo: null,
+    gender: '',
+    ethnicity: [],
+    lookingForGender: [],
+    lookingForEthnicity: []
+  });
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
 
   const genderOptions = ['male', 'female', 'non-binary'];
   const yearOptions = ['freshman', 'sophomore', 'junior', 'senior', 'grad student'];
@@ -155,7 +185,7 @@ const Profile = () => {
     loadUserData();
   }, [status, session]);
 
-  const handleSectionClick = (section) => {
+  const handleSectionClick = (section: Section) => {
     if (editingSection) return;
 
     const sectionEl = sectionRefs.current[section.id];
@@ -266,9 +296,10 @@ const Profile = () => {
       setProfileImageFile(null);
       setEditingSection(null);
       setZoomTransform({ scale: 1, x: 0, y: 0 });
-    } catch (error) {
-      console.error("profile update error:", error);
-      toast.error(error.message || "failed to update profile");
+    } catch (err: unknown) {
+      console.error("profile update error:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message || "failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -280,8 +311,8 @@ const Profile = () => {
     setProfileImageFile(null);
   };
 
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files[0];
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       // Store the actual file for upload
       setProfileImageFile(file);
@@ -289,9 +320,10 @@ const Profile = () => {
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
+        const result = reader.result as string | null;
         setEditValues({
           ...editValues,
-          photo: reader.result
+          photo: result
         });
       };
       reader.readAsDataURL(file);
@@ -309,7 +341,7 @@ const Profile = () => {
     }
   };
 
-  const renderSectionContent = (section) => {
+  const renderSectionContent = (section: Section) => {
     const isEditing = editingSection === section.id;
 
     if (!isEditing) {
@@ -655,7 +687,7 @@ const Profile = () => {
                 return (
                   <div
                     key={section.id}
-                    ref={el => sectionRefs.current[section.id] = el}
+                    ref={(el) => { sectionRefs.current[section.id] = el; }}
                     onClick={() => !isEditing && handleSectionClick(section)}
                     className={`
                       ${section.gridClass}
