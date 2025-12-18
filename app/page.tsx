@@ -592,8 +592,21 @@ const Home = () => {
         href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" 
         rel="stylesheet" 
       />
-      
-      <div className="relative w-full h-screen overflow-hidden bg-gradient-animated" style={{ paddingTop: 'max(0px, env(safe-area-inset-top))', paddingBottom: 'max(0px, env(safe-area-inset-bottom))', paddingLeft: 'max(0px, env(safe-area-inset-left))', paddingRight: 'max(0px, env(safe-area-inset-right))', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <div 
+          className="absolute inset-0 flex flex-col items-center justify-center px-4"
+          style={{
+            filter: showAuth ? 'blur(8px)' : 'none',
+            transition: 'filter 0.3s ease'
+          }}
+        ></div>
+      <div 
+        className="absolute inset-0 flex flex-col items-center justify-center px-4 overflow-hidden bg-gradient-animated" 
+        style={{ paddingTop: 'max(0px, env(safe-area-inset-top))', 
+                paddingBottom: 'max(0px, env(safe-area-inset-bottom))', 
+                paddingLeft: 'max(0px, env(safe-area-inset-left))', 
+                paddingRight: 'max(0px, env(safe-area-inset-right))', 
+                position: 'fixed', 
+                top: 0, left: 0, right: 0, bottom: 0 }}>
         {bubbles.map((bubble, i) => {
           const messageIndex = i % messageTexts.length;
           
@@ -634,13 +647,13 @@ const Home = () => {
           }}
         >
           <h1 
-            className="text-6xl sm:text-7xl md:text-8xl font-bold text-gray-800 tracking-tight whitespace-nowrap"
+            className="text-5xl sm:text-6xl md:text-7xl font-bold text-gray-800 tracking-tight whitespace-nowrap"
             style={{ fontFamily: 'Merriweather, serif' }}
           >
             looks matter.
           </h1>
           <p 
-            className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mt-6 max-w-4xl text-center px-4"
+            className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 mt-2 max-w-4xl text-center px-4"
             style={{ fontFamily: 'Merriweather, serif' }}
           >
             get a date who's actually as attractive as you
@@ -648,7 +661,7 @@ const Home = () => {
           
           <button
             onClick={handleGetMatched}
-            className="mt-8 px-8 py-4 bg-gray-800 text-white font-bold rounded-full hover:bg-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+            className="mt-6 px-8 py-4 bg-gray-800 text-white font-bold rounded-full hover:bg-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
             style={{ fontFamily: 'Merriweather, serif' }}
           >
             get matched

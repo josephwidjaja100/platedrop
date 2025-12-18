@@ -11,12 +11,19 @@ export interface User {
   _id: ObjectId;
   profile: {
     name: string;
+    year: '';
+    major: '';
+    instagram: '';
+    photo: null;
+    gender: '';
+    ethnicity: [];
+    lookingForGender: [];
+    lookingForEthnicity: [];
   }
   email?: string;
   createdAt: Date;
   updatedAt: Date;
   emailPassword?: EmailPassword;
-  accounts?: any[];
 }
 
 // User creation options interface

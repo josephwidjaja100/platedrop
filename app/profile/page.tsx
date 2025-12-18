@@ -2,13 +2,19 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Instagram, User, Camera, Upload, X } from 'lucide-react';
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import Dropdown from '@/components/Dropdown';
 import MultiselectDropdown from '@/components/MultiselectDropdown';
+import { validateProfileDataWithImage } from '@/lib/validation/userProfile-validation';
 
 const Profile = () => {
+  const { data: session, status } = useSession();
   const [editingSection, setEditingSection] = useState(null);
   const [zoomTransform, setZoomTransform] = useState({ scale: 1, x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const containerRef = useRef(null);
   const sectionRefs = useRef({});
   const fileInputRef = useRef(null);
@@ -36,6 +42,7 @@ const Profile = () => {
   });
 
   const [editValues, setEditValues] = useState({});
+  const [profileImageFile, setProfileImageFile] = useState(null);
 
   const genderOptions = ['male', 'female', 'non-binary'];
   const yearOptions = ['freshman', 'sophomore', 'junior', 'senior', 'grad student'];
@@ -106,6 +113,48 @@ const Profile = () => {
 
   const profileSections = isMobile ? mobileSections : desktopSections;
 
+  // Load user profile data
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (status !== "authenticated" || !session) return;
+
+      try {
+        setLoading(true);
+
+        const response = await fetch("/api/user");
+
+        if (!response.ok) {
+          throw new Error("failed to fetch user data");
+        }
+
+        const result = await response.json();
+        const data = result.data;
+
+        if (data?.profile) {
+          setProfile({
+            name: data.profile.name || '',
+            year: data.profile.year || '',
+            major: data.profile.major || '',
+            instagram: data.profile.instagram || '',
+            photo: data.profile.photo || null,
+            gender: data.profile.gender || '',
+            ethnicity: data.profile.ethnicity || [],
+            lookingForGender: data.profile.lookingForGender || [],
+            lookingForEthnicity: data.profile.lookingForEthnicity || []
+          });
+        }
+        setDataLoaded(true);
+      } catch (error) {
+        console.error("failed to load user data:", error);
+        toast.error("failed to load profile data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [status, session]);
+
   const handleSectionClick = (section) => {
     if (editingSection) return;
 
@@ -114,17 +163,12 @@ const Profile = () => {
 
     const sectionRect = sectionEl.getBoundingClientRect();
     
-    // Button height + padding from bottom (approximately 250px total)
     const buttonAreaHeight = 250;
-    const topPadding = 20; // Padding from top
+    const topPadding = 20;
     
-    // Available viewport height for the expanded section
     const availableHeight = window.innerHeight - buttonAreaHeight - topPadding;
-    
-    // Calculate target Y position (top of available area + some padding)
     const targetY = topPadding + availableHeight / 2;
     
-    // Current center of section
     const sectionCenterX = sectionRect.left + sectionRect.width / 2;
     const sectionCenterY = sectionRect.top + sectionRect.height / 2;
     
@@ -132,7 +176,6 @@ const Profile = () => {
     
     const scale = isMobile ? 1 : 1.5; 
     
-    // Calculate translation to move section to the desired position
     const translateX = isMobile ? 0 : (viewportCenterX - sectionCenterX) / scale;
     const translateY = isMobile ? 0 : (targetY - sectionCenterY) / scale;
 
@@ -150,23 +193,100 @@ const Profile = () => {
       lookingForEthnicity: [...profile.lookingForEthnicity]
     });
 
+    setProfileImageFile(null);
     setEditingSection(section.id);
   };
 
-  const handleSave = () => {
-    setProfile(editValues);
-    setEditingSection(null);
-    setZoomTransform({ scale: 1, x: 0, y: 0 });
+  const handleSave = async () => {
+    if (status !== "authenticated" || !session) {
+      toast.error("you must be logged in to save changes");
+      return;
+    }
+
+    // Client-side validation
+    const validation = validateProfileDataWithImage(editValues, profileImageFile);
+    if (!validation.isValid) {
+      toast.error(validation.error);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let response;
+
+      if (profileImageFile) {
+        // Use FormData for image uploads
+        const formData = new FormData();
+        formData.append('name', editValues.name);
+        formData.append('year', editValues.year);
+        formData.append('major', editValues.major);
+        formData.append('instagram', editValues.instagram || '');
+        formData.append('gender', editValues.gender);
+        formData.append('ethnicity', JSON.stringify(editValues.ethnicity));
+        formData.append('lookingForGender', JSON.stringify(editValues.lookingForGender));
+        formData.append('lookingForEthnicity', JSON.stringify(editValues.lookingForEthnicity));
+        formData.append('photo', profileImageFile);
+
+        response = await fetch("/api/user", {
+          method: "PUT",
+          body: formData,
+        });
+      } else {
+        // Use JSON for regular updates
+        response = await fetch("/api/user", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: editValues.name,
+            year: editValues.year,
+            major: editValues.major,
+            instagram: editValues.instagram || '',
+            gender: editValues.gender,
+            ethnicity: editValues.ethnicity,
+            lookingForGender: editValues.lookingForGender,
+            lookingForEthnicity: editValues.lookingForEthnicity,
+            photo: editValues.photo
+          }),
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "failed to update profile");
+      }
+
+      const result = await response.json();
+      
+      // Update local state with new data
+      if (result.data?.profile) {
+        setProfile(result.data.profile);
+      }
+
+      toast.success("profile updated successfully!");
+      setProfileImageFile(null);
+      setEditingSection(null);
+      setZoomTransform({ scale: 1, x: 0, y: 0 });
+    } catch (error) {
+      console.error("profile update error:", error);
+      toast.error(error.message || "failed to update profile");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
     setEditingSection(null);
     setZoomTransform({ scale: 1, x: 0, y: 0 });
+    setProfileImageFile(null);
   };
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
+      // Store the actual file for upload
+      setProfileImageFile(file);
+      
+      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setEditValues({
@@ -183,6 +303,7 @@ const Profile = () => {
       ...editValues,
       photo: null
     });
+    setProfileImageFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -210,11 +331,11 @@ const Profile = () => {
               </p>
               <p className="text-base leading-tight">
                 <span className={profile.year ? 'text-gray-700' : 'text-gray-400'}>
-                  {profile.year || 'freshman'}
+                  {profile.year || 'year'}
                 </span>
                 <span className="text-gray-700"> • </span>
                 <span className={profile.major ? 'text-gray-700' : 'text-gray-400'}>
-                  {profile.major || 'food science'}
+                  {profile.major || 'major'}
                 </span>
               </p>
             </div>
@@ -340,7 +461,7 @@ const Profile = () => {
                 />
                 <button
                   onClick={handleRemovePhoto}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
+                  className="absolute top-2 right-2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-900 transition-colors shadow-lg"
                 >
                   <X size={16} />
                 </button>
@@ -416,6 +537,85 @@ const Profile = () => {
     }
   };
 
+  // Show loading state
+  if (status === "loading" || (status === "authenticated" && !dataLoaded)) {
+    return (
+      <>
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" 
+          rel="stylesheet" 
+        />
+        <style>{`
+          @keyframes gradientShift {
+            0% {
+              background-position: 0% 50%;
+            }
+            50% {
+              background-position: 100% 50%;
+            }
+            100% {
+              background-position: 0% 50%;
+            }
+          }
+          
+          .bg-gradient-animated {
+            background: linear-gradient(135deg, #dbeafe, #e9d5ff, #fae8ff, #ddd6fe, #bfdbfe);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+          }
+        `}</style>
+        <div className="fixed inset-0 bg-gradient-animated flex items-center justify-center" style={{ fontFamily: 'Merriweather, serif' }}>
+          <div className="text-center">
+            <div className="animate-spin h-12 w-12 border-4 border-gray-800 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-700">loading your profile...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Show login prompt if not authenticated
+  if (status === "unauthenticated") {
+    return (
+      <>
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" 
+          rel="stylesheet" 
+        />
+        <style>{`
+          @keyframes gradientShift {
+            0% {
+              background-position: 0% 50%;
+            }
+            50% {
+              background-position: 100% 50%;
+            }
+            100% {
+              background-position: 0% 50%;
+            }
+          }
+          
+          .bg-gradient-animated {
+            background: linear-gradient(135deg, #dbeafe, #e9d5ff, #fae8ff, #ddd6fe, #bfdbfe);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+          }
+        `}</style>
+        <div className="fixed inset-0 bg-gradient-animated flex items-center justify-center" style={{ fontFamily: 'Merriweather, serif' }}>
+          <div className="text-center">
+            <p className="text-gray-700 mb-4">please log in to access your profile</p>
+            <button
+              onClick={() => (window.location.href = "/")}
+              className="px-8 py-3 bg-gray-800 text-white font-bold rounded-full hover:bg-gray-700 transition-all duration-300"
+            >
+              go to login
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <link 
@@ -437,13 +637,13 @@ const Profile = () => {
         >
           <div className={`w-full mx-auto ${isMobile ? 'max-w-md px-4' : 'max-w-4xl px-safe relative'}`}>
             <div className={`text-center ${isMobile ? 'mb-6' : 'mb-3 md:mb-6'}`}>
-              <h1 className="text-xl md:text-3xl font-bold text-gray-900">your profile</h1>
-              <p className="text-gray-700 mt-1.5 text-xs md:text-sm">click any section to edit</p>
+              <h1 className="text-3xl font-bold text-gray-900">your profile</h1>
+              <p className="text-gray-700 mt-1.5 text-sm md:text-sm">click any section to edit</p>
             </div>
 
             <div 
               className={`
-                ${isMobile ? 'grid grid-cols-2 gap-4 mb-20' : 'grid grid-cols-4 gap-2 md:gap-3'} 
+                ${isMobile ? `grid grid-cols-2 gap-2 ${editingSection ? 'mb-32' : 'mb-8'}` : 'grid grid-cols-4 gap-2 md:gap-3'} 
                 w-full
               `} 
               style={isMobile ? {} : { gridAutoRows: 'minmax(110px, auto)' }}
@@ -470,7 +670,7 @@ const Profile = () => {
                     }}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wider">
+                      <span className="text-sm md:text-sm font-bold text-gray-700 uppercase tracking-wider">
                         {section.title}
                       </span>
                       {section.icon && <section.icon size={14} className="text-gray-600" />}
@@ -487,16 +687,18 @@ const Profile = () => {
         </div>
 
         {editingSection && (
-          <div className={`fixed ${isMobile ? 'bottom-4' : 'bottom-0'} left-0 right-0 flex justify-center gap-3 md:gap-5 fade-in px-safe ${isMobile ? 'pb-4' : 'pb-safe pt-4'} pointer-events-none`}>
+          <div className={`fixed ${isMobile ? 'bottom-4' : 'bottom-0'} left-0 right-0 flex justify-center gap-3 md:gap-5 fade-in px-safe ${isMobile ? 'pb-4' : 'pb-safe pt-4'} pointer-events-none z-[100]`}>
             <button
               onClick={handleSave}
-              className="px-6 md:px-8 py-2 md:py-3 bg-gray-900 text-white font-bold rounded-full hover:bg-gray-800 transition-all duration-300 shadow-2xl text-sm md:text-base whitespace-nowrap pointer-events-auto"
+              disabled={loading}
+              className="px-6 md:px-8 py-2 md:py-3 bg-gray-900 text-white font-bold rounded-full hover:bg-gray-800 transition-all duration-300 shadow-2xl text-sm md:text-base whitespace-nowrap pointer-events-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              save changes
+              {loading ? 'saving...' : 'save changes'}
             </button>
             <button
               onClick={handleCancel}
-              className="px-6 md:px-8 py-2 md:py-3 bg-white text-gray-900 font-bold rounded-full hover:bg-gray-100 transition-all duration-300 border-2 border-gray-400 shadow-2xl text-sm md:text-base whitespace-nowrap pointer-events-auto"
+              disabled={loading}
+              className="px-6 md:px-8 py-2 md:py-3 bg-white text-gray-900 font-bold rounded-full hover:bg-gray-100 transition-all duration-300 border-2 border-gray-400 shadow-2xl text-sm md:text-base whitespace-nowrap pointer-events-auto disabled:opacity-50 disabled:cursor-not-allowed"
             >
               cancel
             </button>

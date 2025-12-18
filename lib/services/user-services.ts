@@ -7,7 +7,6 @@ export const createUser = async (options: CreateUserOptions): Promise<User> => {
     const {
         email,
         name = '',
-        image,
         hashedPassword,
         emailVerified = false,
         provider = 'credentials'
@@ -31,6 +30,14 @@ export const createUser = async (options: CreateUserOptions): Promise<User> => {
         _id: new ObjectId(),
         profile: {
           name: name,
+          year: '',
+          major: '',
+          instagram: '',
+          photo: null,
+          gender: '', 
+          ethnicity: [], 
+          lookingForGender: [],
+          lookingForEthnicity: []
         },
         email: sanitizedEmail,
         createdAt: new Date(),

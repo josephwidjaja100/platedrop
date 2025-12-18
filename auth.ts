@@ -10,7 +10,7 @@ if (!process.env.AUTH_SECRET) {
   throw new Error('AUTH_SECRET environment variable is not set')
 }
 
-export const authConfig = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   adapter: MongoDBAdapter(client),
   providers: [
@@ -100,7 +100,7 @@ export const authConfig = {
       return session;
     }
   },
-}
+})
 
 export const providerMap = {
   credentials: {
