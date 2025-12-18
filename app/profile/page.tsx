@@ -675,7 +675,7 @@ const Profile = () => {
 
             <div 
               className={`
-                ${isMobile ? `grid grid-cols-2 gap-2 ${editingSection ? 'mb-32' : 'mb-8'}` : 'grid grid-cols-4 gap-2 md:gap-3'} 
+                ${isMobile ? `grid grid-cols-2 gap-3 ${editingSection ? 'mb-32' : 'mb-8'}` : 'grid grid-cols-4 gap-2 md:gap-3'} 
                 w-full
               `} 
               style={isMobile ? {} : { gridAutoRows: 'minmax(110px, auto)' }}
