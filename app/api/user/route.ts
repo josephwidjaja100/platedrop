@@ -146,7 +146,7 @@ export async function PUT(request: NextRequest) {
     if (validImage) {
       try {
         const blob = await put(
-          `profiles/${Date.now()}-${session.user.email}-profile.jpg`, 
+          `userimages/${Date.now()}-${session.user.email}-profile.jpg`, 
           validImage, 
           { access: 'public' }
         );
