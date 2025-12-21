@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     
     // Extract attractiveness score from the result
     // The result should be in beautyResult.data array
-    const attractiveness = parseFloat(result.data[0]) || 0;
+    const attractiveness = parseFloat((result.data as string[])[0]) || 0;
     
     console.log('Extracted attractiveness score:', attractiveness);
 
