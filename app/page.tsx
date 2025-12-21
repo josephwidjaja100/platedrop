@@ -198,9 +198,13 @@ const Home = () => {
             await signIn("credentials", {
               email: fullEmail,
               password: signupState.password,
-              redirectTo: "/profile",
+              redirect: false,
             });
           }, 1500);
+
+          setTimeout(() => {
+            window.location.href = '/profile';
+          }, 2000);
         }
       } else {
         setSignupState(prev => ({
