@@ -152,7 +152,7 @@ export async function PUT(request: NextRequest) {
         );
         
         profileUpdate.photo = blob.url;
-        console.log(`profile image uploaded to vercel blob: ${blob.url}`);
+        // console.log(`profile image uploaded to vercel blob: ${blob.url}`);
       } catch (error) {
         console.error('error uploading profile image to vercel blob:', error);
         return NextResponse.json({ error: 'failed to upload profile image to storage' }, { status: 500 });

@@ -37,7 +37,8 @@ export const createUser = async (options: CreateUserOptions): Promise<User> => {
           gender: '', 
           ethnicity: [], 
           lookingForGender: [],
-          lookingForEthnicity: []
+          lookingForEthnicity: [],
+          attractiveness: 0
         },
         email: sanitizedEmail,
         createdAt: new Date(),

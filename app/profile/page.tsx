@@ -20,6 +20,7 @@ const Profile = () => {
     ethnicity: string[];
     lookingForGender: string[];
     lookingForEthnicity: string[];
+    attractiveness: number;
   };
 
   type Section = {
@@ -58,7 +59,8 @@ const Profile = () => {
     gender: '', 
     ethnicity: [], 
     lookingForGender: [],
-    lookingForEthnicity: []
+    lookingForEthnicity: [],
+    attractiveness: 0
   });
 
   const [editValues, setEditValues] = useState<ProfileData>({
@@ -70,7 +72,8 @@ const Profile = () => {
     gender: '',
     ethnicity: [],
     lookingForGender: [],
-    lookingForEthnicity: []
+    lookingForEthnicity: [],
+    attractiveness: 0
   });
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
 
@@ -170,7 +173,8 @@ const Profile = () => {
             gender: data.profile.gender || '',
             ethnicity: data.profile.ethnicity || [],
             lookingForGender: data.profile.lookingForGender || [],
-            lookingForEthnicity: data.profile.lookingForEthnicity || []
+            lookingForEthnicity: data.profile.lookingForEthnicity || [],
+            attractiveness: data.profile.attractiveness || 0
           });
         }
         setDataLoaded(true);
@@ -220,7 +224,8 @@ const Profile = () => {
       gender: profile.gender,
       ethnicity: [...profile.ethnicity],
       lookingForGender: [...profile.lookingForGender],
-      lookingForEthnicity: [...profile.lookingForEthnicity]
+      lookingForEthnicity: [...profile.lookingForEthnicity],
+      attractiveness: profile.attractiveness
     });
 
     setProfileImageFile(null);
@@ -241,6 +246,8 @@ const Profile = () => {
     }
 
     setLoading(true);
+    const shouldAnalyze = profileImageFile !== null;
+
     try {
       let response;
 
@@ -293,6 +300,31 @@ const Profile = () => {
       }
 
       toast.success("profile updated successfully!");
+
+      // Analyze attractiveness if new photo was uploaded
+      if (shouldAnalyze && result.data?.profile?.photo) {
+        toast.info("analyzing your photo...");
+        
+        const analyzeResponse = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageUrl: result.data.profile.photo
+          }),
+        });
+
+        if (analyzeResponse.ok) {
+          const analyzeResult = await analyzeResponse.json();
+          setProfile(prev => ({
+            ...prev,
+            attractiveness: analyzeResult.data.attractiveness
+          }));
+          toast.success(`photo analysis complete! score: ${analyzeResult.data.attractiveness.toFixed(1)}`);
+        } else {
+          toast.warning("photo uploaded but analysis failed");
+        }
+      }
+
       setProfileImageFile(null);
       setEditingSection(null);
       setZoomTransform({ scale: 1, x: 0, y: 0 });

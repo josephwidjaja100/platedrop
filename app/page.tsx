@@ -36,12 +36,12 @@ const Home = () => {
   ];
 
   const messageTexts = [
-    "my date drop is so mid. please help.",
+    "my date is so mid. please help.",
     "im just not gonna reply to him he's not my type.",
     "bro she looks like a model i have no chance",
     "he looks like he would go varsity in calculus",
-    "my date drop ghosted me fml.",
-    "gotta wait till next week ig",
+    "my date just ghosted me fml.",
+    "i cant believe i have to sit through an hour with this girl",
     "he literally has a mullet",
     "he's literally the most stereotypical abb looking guy",
   ];

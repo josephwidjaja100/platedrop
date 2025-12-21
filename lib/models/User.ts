@@ -19,6 +19,7 @@ export interface User {
     ethnicity: [];
     lookingForGender: [];
     lookingForEthnicity: [];
+    attractiveness: 0;
   }
   email?: string;
   createdAt: Date;

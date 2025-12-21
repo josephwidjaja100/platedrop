@@ -144,6 +144,7 @@ export interface UserProfileData {
   ethnicity: string[];
   lookingForGender: string[];
   lookingForEthnicity: string[];
+  attractiveness: number;
 }
 
 export interface ProfileImageData {
@@ -414,7 +415,8 @@ export function validateProfileData(data: any): { isValid: boolean; error?: stri
     gender: data.gender,
     ethnicity: data.ethnicity,
     lookingForGender: data.lookingForGender || [],
-    lookingForEthnicity: data.lookingForEthnicity || []
+    lookingForEthnicity: data.lookingForEthnicity || [],
+    attractiveness: data.attractiveness || 0
   };
   
   return { isValid: true, validData };
