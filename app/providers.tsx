@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { SessionProvider } from 'next-auth/react';
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "sonner";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>{children}<Analytics /></SessionProvider>;
+  return <SessionProvider>{children}<Toaster /><Analytics /></SessionProvider>;
 }
