@@ -382,7 +382,7 @@ const Profile = () => {
           return (
             <div className="space-y-2">
               <p className={`font-bold text-lg leading-tight ${profile.name ? 'text-gray-900' : 'text-gray-400'}`}>
-                {profile.name || 'plate drop'}
+                {profile.name || 'name'}
               </p>
               <p className="text-base leading-tight">
                 <span className={profile.ethnicity.length > 0 ? 'text-gray-700' : 'text-gray-400'}>
@@ -428,7 +428,7 @@ const Profile = () => {
             <p className="text-base">
               <span className="text-gray-800">@</span>
               <span className={profile.instagram ? 'text-gray-800' : 'text-gray-400'}>
-                {profile.instagram || 'plate.drop'}
+                {profile.instagram || 'looks.matr'}
               </span>
             </p>
           );

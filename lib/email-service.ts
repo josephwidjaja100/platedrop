@@ -5,11 +5,11 @@ import { sanitizeEmail } from '@/lib/auth-utils';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendOTPEmail = async (email: string, otpCode: string, type: 'signup' | 'password-reset' = 'signup') => {
-  const subject = type === 'signup' ? 'complete your plate drop account setup' : 'reset your password';
+  const subject = type === 'signup' ? 'complete your looksmatr account setup' : 'reset your password';
   
   try {
     const { data, error } = await resend.emails.send({
-      from: 'plate drop <onboarding@resend.dev>',
+      from: 'looksmatr <onboarding@resend.dev>',
       to: [email],
       subject,
       react: OtpChatEmail({
