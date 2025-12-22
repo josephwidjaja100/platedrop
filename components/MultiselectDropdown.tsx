@@ -94,14 +94,13 @@ const MultiselectDropdown: React.FC<MultiselectDropdownProps> = ({
         <span className="truncate">{getDisplayText()}</span>
         <div className="flex items-center gap-2 ml-2 flex-shrink-0">
           {values.length > 0 && (
-            <button
-              type="button"
+            <div
               onClick={handleClearAll}
-              className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+              className="p-1 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
               title="Clear all"
             >
               <X size={14} className="text-gray-500" />
-            </button>
+            </div>
           )}
           <ChevronDown 
             size={16} 

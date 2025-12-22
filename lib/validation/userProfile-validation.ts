@@ -9,9 +9,9 @@ export const YEAR_OPTIONS = [
 export const ETHNICITY_OPTIONS = [
   'prefer not to answer',
   'african',
-  'asian (east)',
-  'asian (south)',
-  'asian (southeast)',
+  'east asian',
+  'south asian',
+  'southeast asian',
   'black / african american',
   'hispanic / latinx',
   'middle eastern / north african',

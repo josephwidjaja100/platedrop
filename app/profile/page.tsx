@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import Dropdown from '@/components/Dropdown';
 import MultiselectDropdown from '@/components/MultiselectDropdown';
+import PhotoEditor from '@/components/PhotoEditor';
 import { validateProfileDataWithImage } from '@/lib/validation/userProfile-validation';
 
 const Profile = () => {
@@ -36,6 +37,8 @@ const Profile = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [showPhotoEditor, setShowPhotoEditor] = useState(false);
+  const [tempImageUrl, setTempImageUrl] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -82,9 +85,8 @@ const Profile = () => {
   const genderOptions = ['male', 'female', 'non-binary'];
   const yearOptions = ['freshman', 'sophomore', 'junior', 'senior', 'grad student'];
   const majorOptions = ["aeronautics and astronautics", "african and african american studies", "african studies", "american studies", "anthropology", "applied physics", "archaeology", "art history", "art practice", "asian american studies", "atmosphere / energy", "bioengineering", "biology", "biomechanical engineering", "biomedical computation", "chemical engineering", "chemistry", "chicana/o - latina/o studies", "china studies", "civil engineering", "classics", "communication", "community health and prevention research", "comparative literature", "comparative studies in race and ethnicity", "computer science", "creative writing", "dance (taps minor)", "data science", "data science & social systems", "democracy, development, and the rule of law", "design", "digital humanities", "earth and planetary sciences", "earth systems", "east asian studies", "economics", "education", "electrical engineering", "energy science and engineering", "engineering physics", "english", "environmental systems engineering", "ethics in society", "european studies", "feminist, gender, and sexuality studies", "film and media studies", "french", "geophysics", "german studies", "global studies", "history", "honors in the arts", "human biology", "human rights", "iberian and latin american cultures", "international policy studies", "international relations", "international security studies", "iranian studies", "islamic studies", "italian", "japanese", "jewish studies", "korean", "laboratory animal science", "latin american studies", "linguistics", "management science and engineering", "materials science and engineering", "mathematical and computational science", "mathematics", "mechanical engineering", "medieval studies", "middle eastern language, literature and culture", "modern languages", "modern thought and literature", "music", "music, science, and technology", "native american studies", "philosophy", "philosophy and religious studies", "physics", "political science", "portuguese", "psychology", "public policy", "religious studies", "science, technology, and society", "slavic languages and literatures", "sociology", "south asian studies", "spanish", "statistics", "sustainability", "sustainable architecture + engineering", "symbolic systems", "theater and performance studies", "translation studies", "urban studies"];
-  const ethnicityOptions = ['prefer not to answer', 'african', 'asian (east)', 'asian (south)', 'asian (southeast)', 'black / african american', 'hispanic / latinx', 'middle eastern / north african', 'native american / alaskan native', 'native hawaiian / pacific islander', 'white'];
+  const ethnicityOptions = ['prefer not to answer', 'african', 'east asian', 'south asian', 'southeast asian', 'black / african american', 'hispanic / latinx', 'middle eastern / north african', 'native american / alaskan native', 'native hawaiian / pacific islander', 'white'];
 
-  // Check if all required sections are filled (everything except lookingFor)
   const areRequiredSectionsFilled = (data: ProfileData) => {
     const { name, year, major, instagram, gender, ethnicity, photo } = data;
     return name && year && major && gender && ethnicity.length > 0 && instagram && photo;
@@ -158,7 +160,6 @@ const Profile = () => {
 
   const profileSections = isMobile ? mobileSections : desktopSections;
 
-  // Load user profile data
   useEffect(() => {
     const loadUserData = async () => {
       if (status !== "authenticated" || !session) return;
@@ -253,14 +254,12 @@ const Profile = () => {
       return;
     }
 
-    // Client-side validation
     const validation = validateProfileDataWithImage(editValues, profileImageFile);
     if (!validation.isValid) {
       toast.error(validation.error);
       return;
     }
 
-    // If trying to opt in, verify all required fields are filled
     if (editValues.optInMatching && !areRequiredSectionsFilled(editValues)) {
       const missingSections = [];
       if (!editValues.name) missingSections.push('name');
@@ -282,7 +281,6 @@ const Profile = () => {
       let response;
 
       if (profileImageFile) {
-        // Use FormData for image uploads
         const formData = new FormData();
         formData.append('name', editValues.name);
         formData.append('year', editValues.year);
@@ -300,7 +298,6 @@ const Profile = () => {
           body: formData,
         });
       } else {
-        // Use JSON for regular updates
         response = await fetch("/api/user", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -326,7 +323,6 @@ const Profile = () => {
 
       const result = await response.json();
       
-      // Update local state with new data from server
       if (result.data?.profile) {
         setProfile({
           name: result.data.profile.name || '',
@@ -343,9 +339,6 @@ const Profile = () => {
         });
       }
 
-      toast.success("profile updated successfully!");
-
-      // Analyze attractiveness if new photo was uploaded
       if (shouldAnalyze && result.data?.profile?.photo) {
         toast.info("analyzing your photo...");
         
@@ -363,10 +356,13 @@ const Profile = () => {
             ...prev,
             attractiveness: analyzeResult.data.attractiveness
           }));
-          toast.success(`photo analysis complete! score: ${analyzeResult.data.attractiveness.toFixed(1)}`);
+          toast.success(`photo analysis complete! get ready to match!`);
         } else {
-          toast.warning("photo uploaded but analysis failed");
+          toast.warning("photo uploaded but analysis failed, please try again");
         }
+      }
+      else{
+        toast.success("profile updated successfully!");
       }
 
       setProfileImageFile(null);
@@ -388,88 +384,46 @@ const Profile = () => {
   };
 
   const handleToggleOptIn = () => {
-    if (editingSection) {
-      setEditValues({ ...editValues, optInMatching: !editValues.optInMatching });
-    } else {
-      // When not in edit mode, toggle directly and save
-      const newOptInValue = !profile.optInMatching;
-      handleDirectOptInToggle(newOptInValue);
-    }
-  };
-
-  // Handle opt-in toggle when not in edit mode
-  const handleDirectOptInToggle = async (newValue: boolean) => {
-    if (status !== "authenticated" || !session) {
-      toast.error("you must be logged in to change matching status");
-      return;
-    }
-
-    // Check if trying to opt in without required fields
-    if (newValue && !areRequiredSectionsFilled(profile)) {
-      const missingSections = [];
-      if (!profile.name) missingSections.push('name');
-      if (!profile.year) missingSections.push('year');
-      if (!profile.major) missingSections.push('major');
-      if (!profile.gender) missingSections.push('gender');
-      if (profile.ethnicity.length === 0) missingSections.push('ethnicity');
-      if (!profile.instagram) missingSections.push('instagram');
-      if (!profile.photo) missingSections.push('photo');
-      
-      toast.error(`cannot opt in to matching. please fill: ${missingSections.join(', ')}`);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch("/api/user", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...profile,
-          optInMatching: newValue
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "failed to update matching status");
-      }
-
-      const result = await response.json();
-      
-      if (result.data?.profile) {
-        setProfile({
-          ...profile,
-          optInMatching: result.data.profile.optInMatching
-        });
-        toast.success(newValue ? "opted in to matching!" : "opted out of matching");
-      }
-    } catch (err: unknown) {
-      console.error("opt-in toggle error:", err);
-      const message = err instanceof Error ? err.message : String(err);
-      toast.error(message || "failed to update matching status");
-    } finally {
-      setLoading(false);
-    }
+    setEditValues({ ...editValues, optInMatching: !editValues.optInMatching });
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      // Store the actual file for upload
-      setProfileImageFile(file);
-      
-      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string | null;
-        setEditValues({
-          ...editValues,
-          photo: result
-        });
+        if (result) {
+          setTempImageUrl(result);
+          setShowPhotoEditor(true);
+        }
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePhotoEditorSave = (croppedFile: File) => {
+    setProfileImageFile(croppedFile);
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string | null;
+      setEditValues({
+        ...editValues,
+        photo: result
+      });
+    };
+    reader.readAsDataURL(croppedFile);
+    
+    setShowPhotoEditor(false);
+    setTempImageUrl(null);
+  };
+
+  const handlePhotoEditorCancel = () => {
+    setShowPhotoEditor(false);
+    setTempImageUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -550,20 +504,15 @@ const Profile = () => {
               <p className="text-sm font-medium text-gray-800 flex-shrink min-w-0">
                 {profile.optInMatching ? 'opted in to matching' : 'opted out of matching'}
               </p>
-              <button
-                onClick={handleToggleOptIn}
-                className="relative w-12 h-7 flex items-center rounded-full transition-colors duration-300 cursor-pointer flex-shrink-0"
-                disabled={loading}
-              >
-                <span className="sr-only">Opt in to matching</span>
+              <div className="relative w-12 h-7 flex items-center rounded-full flex-shrink-0 pointer-events-none">
                 <div className={`absolute inset-0 w-12 h-7 rounded-full transition-colors duration-300 ${profile.optInMatching ? 'bg-gray-900' : 'bg-gray-300'}`} />
                 <div className={`absolute left-1 top-1 bg-white w-5 h-5 rounded-full shadow-md transition-transform duration-300 ${profile.optInMatching ? 'translate-x-5' : 'translate-x-0'}`} />
-              </button>
+              </div>
             </div>
           );
         case 'lookingFor':
           return (
-            <div className="space-y-3">
+            <div className="space-y-5">
               <div>
                 <p className="text-xs font-bold text-gray-600 mb-1 uppercase tracking-wider">gender preference</p>
                 <div className="flex flex-wrap gap-1.5">
@@ -718,7 +667,7 @@ const Profile = () => {
       
       case 'lookingFor':
         return (
-          <div className="w-full space-y-4">
+          <div className="w-full space-y-5">
             <div>
               <p className="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wider">gender preference</p>
               <MultiselectDropdown
@@ -895,6 +844,14 @@ const Profile = () => {
               cancel
             </button>
           </div>
+        )}
+
+        {showPhotoEditor && tempImageUrl && (
+          <PhotoEditor
+            imageUrl={tempImageUrl}
+            onSave={handlePhotoEditorSave}
+            onCancel={handlePhotoEditorCancel}
+          />
         )}
 
         <style>{`

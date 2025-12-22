@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const result = await model.predict(
       "/analyze", {
         image: imageBlob,
-        gender: "person",
+        identifier: "person",
     });
     
     // Extract attractiveness score from the result
