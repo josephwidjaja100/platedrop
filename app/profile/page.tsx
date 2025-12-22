@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Instagram, User, Camera, Upload, X } from 'lucide-react';
+import { Instagram, User, Camera, Upload, X, Heart, Target } from 'lucide-react';
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import Dropdown from '@/components/Dropdown';
@@ -21,6 +21,7 @@ const Profile = () => {
     lookingForGender: string[];
     lookingForEthnicity: string[];
     attractiveness: number;
+    optInMatching: boolean;
   };
 
   type Section = {
@@ -28,7 +29,6 @@ const Profile = () => {
     title: string;
     icon?: any;
     gridClass: string;
-    estimatedExpandedHeight: number;
   };
 
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -60,7 +60,8 @@ const Profile = () => {
     ethnicity: [], 
     lookingForGender: [],
     lookingForEthnicity: [],
-    attractiveness: 0
+    attractiveness: 0,
+    optInMatching: false
   });
 
   const [editValues, setEditValues] = useState<ProfileData>({
@@ -73,7 +74,8 @@ const Profile = () => {
     ethnicity: [],
     lookingForGender: [],
     lookingForEthnicity: [],
-    attractiveness: 0
+    attractiveness: 0,
+    optInMatching: false
   });
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
 
@@ -82,34 +84,42 @@ const Profile = () => {
   const majorOptions = ["aeronautics and astronautics", "african and african american studies", "african studies", "american studies", "anthropology", "applied physics", "archaeology", "art history", "art practice", "asian american studies", "atmosphere / energy", "bioengineering", "biology", "biomechanical engineering", "biomedical computation", "chemical engineering", "chemistry", "chicana/o - latina/o studies", "china studies", "civil engineering", "classics", "communication", "community health and prevention research", "comparative literature", "comparative studies in race and ethnicity", "computer science", "creative writing", "dance (taps minor)", "data science", "data science & social systems", "democracy, development, and the rule of law", "design", "digital humanities", "earth and planetary sciences", "earth systems", "east asian studies", "economics", "education", "electrical engineering", "energy science and engineering", "engineering physics", "english", "environmental systems engineering", "ethics in society", "european studies", "feminist, gender, and sexuality studies", "film and media studies", "french", "geophysics", "german studies", "global studies", "history", "honors in the arts", "human biology", "human rights", "iberian and latin american cultures", "international policy studies", "international relations", "international security studies", "iranian studies", "islamic studies", "italian", "japanese", "jewish studies", "korean", "laboratory animal science", "latin american studies", "linguistics", "management science and engineering", "materials science and engineering", "mathematical and computational science", "mathematics", "mechanical engineering", "medieval studies", "middle eastern language, literature and culture", "modern languages", "modern thought and literature", "music", "music, science, and technology", "native american studies", "philosophy", "philosophy and religious studies", "physics", "political science", "portuguese", "psychology", "public policy", "religious studies", "science, technology, and society", "slavic languages and literatures", "sociology", "south asian studies", "spanish", "statistics", "sustainability", "sustainable architecture + engineering", "symbolic systems", "theater and performance studies", "translation studies", "urban studies"];
   const ethnicityOptions = ['prefer not to answer', 'african', 'asian (east)', 'asian (south)', 'asian (southeast)', 'black / african american', 'hispanic / latinx', 'middle eastern / north african', 'native american / alaskan native', 'native hawaiian / pacific islander', 'white'];
 
+  // Check if all required sections are filled (everything except lookingFor)
+  const areRequiredSectionsFilled = (data: ProfileData) => {
+    const { name, year, major, instagram, gender, ethnicity, photo } = data;
+    return name && year && major && gender && ethnicity.length > 0 && instagram && photo;
+  };
+
   const mobileSections = [
     { 
       id: 'basic', 
       title: 'basic info', 
       icon: User,
-      gridClass: 'col-span-1 row-span-1',
-      estimatedExpandedHeight: 400
+      gridClass: 'col-span-1 row-span-2',
     },
     { 
       id: 'instagram', 
       title: 'instagram', 
       icon: Instagram,
       gridClass: 'col-span-1 row-span-1',
-      estimatedExpandedHeight: 100
+    },
+    { 
+      id: 'optInMatching', 
+      title: 'matching', 
+      icon: Heart,
+      gridClass: 'col-span-1 row-span-1',
     },
     { 
       id: 'lookingFor', 
       title: 'looking for', 
-      icon: User,
-      gridClass: 'col-span-2 row-span-1',
-      estimatedExpandedHeight: 350
+      icon: Target,
+      gridClass: 'col-span-2 row-span-2',
     },
     { 
       id: 'photo', 
       title: 'photo', 
       icon: Camera,
-      gridClass: 'col-span-2 row-span-2',
-      estimatedExpandedHeight: 300
+      gridClass: 'col-span-2 row-span-4',
     }
   ];
 
@@ -118,29 +128,31 @@ const Profile = () => {
       id: 'basic', 
       title: 'basic info', 
       icon: User,
-      gridClass: 'col-span-1 row-span-1',
-      estimatedExpandedHeight: 400
+      gridClass: 'col-span-2 row-span-2',
     },
     { 
       id: 'instagram', 
       title: 'instagram', 
       icon: Instagram,
-      gridClass: 'col-span-1 row-span-1',
-      estimatedExpandedHeight: 100
+      gridClass: 'col-span-2 row-span-1',
     },
     { 
-      id: 'lookingFor', 
-      title: 'looking for', 
-      icon: User,
-      gridClass: 'col-span-2 row-span-2',
-      estimatedExpandedHeight: 350
+      id: 'optInMatching', 
+      title: 'matching', 
+      icon: Heart,
+      gridClass: 'col-span-2 row-span-1',
     },
     { 
       id: 'photo', 
       title: 'photo', 
       icon: Camera,
-      gridClass: 'col-span-2 row-span-3 col-start-3 row-start-1',
-      estimatedExpandedHeight: 300
+      gridClass: 'col-span-4 row-span-4 col-start-5 row-start-1',
+    },
+    { 
+      id: 'lookingFor', 
+      title: 'looking for', 
+      icon: Target,
+      gridClass: 'col-span-4 row-span-2 col-start-1 row-start-3',
     }
   ];
 
@@ -164,7 +176,7 @@ const Profile = () => {
         const data = result.data;
 
         if (data?.profile) {
-          setProfile({
+          const profileData = {
             name: data.profile.name || '',
             year: data.profile.year || '',
             major: data.profile.major || '',
@@ -174,8 +186,10 @@ const Profile = () => {
             ethnicity: data.profile.ethnicity || [],
             lookingForGender: data.profile.lookingForGender || [],
             lookingForEthnicity: data.profile.lookingForEthnicity || [],
-            attractiveness: data.profile.attractiveness || 0
-          });
+            attractiveness: data.profile.attractiveness || 0,
+            optInMatching: data.profile.optInMatching || false
+          };
+          setProfile(profileData);
         }
         setDataLoaded(true);
       } catch (error) {
@@ -225,7 +239,8 @@ const Profile = () => {
       ethnicity: [...profile.ethnicity],
       lookingForGender: [...profile.lookingForGender],
       lookingForEthnicity: [...profile.lookingForEthnicity],
-      attractiveness: profile.attractiveness
+      attractiveness: profile.attractiveness,
+      optInMatching: profile.optInMatching
     });
 
     setProfileImageFile(null);
@@ -242,6 +257,21 @@ const Profile = () => {
     const validation = validateProfileDataWithImage(editValues, profileImageFile);
     if (!validation.isValid) {
       toast.error(validation.error);
+      return;
+    }
+
+    // If trying to opt in, verify all required fields are filled
+    if (editValues.optInMatching && !areRequiredSectionsFilled(editValues)) {
+      const missingSections = [];
+      if (!editValues.name) missingSections.push('name');
+      if (!editValues.year) missingSections.push('year');
+      if (!editValues.major) missingSections.push('major');
+      if (!editValues.gender) missingSections.push('gender');
+      if (editValues.ethnicity.length === 0) missingSections.push('ethnicity');
+      if (!editValues.instagram) missingSections.push('instagram');
+      if (!editValues.photo && !profileImageFile) missingSections.push('photo');
+      
+      toast.error(`cannot opt in to matching. please fill: ${missingSections.join(', ')}`);
       return;
     }
 
@@ -262,6 +292,7 @@ const Profile = () => {
         formData.append('ethnicity', JSON.stringify(editValues.ethnicity));
         formData.append('lookingForGender', JSON.stringify(editValues.lookingForGender));
         formData.append('lookingForEthnicity', JSON.stringify(editValues.lookingForEthnicity));
+        formData.append('optInMatching', editValues.optInMatching.toString());
         formData.append('photo', profileImageFile);
 
         response = await fetch("/api/user", {
@@ -282,6 +313,7 @@ const Profile = () => {
             ethnicity: editValues.ethnicity,
             lookingForGender: editValues.lookingForGender,
             lookingForEthnicity: editValues.lookingForEthnicity,
+            optInMatching: editValues.optInMatching,
             photo: editValues.photo
           }),
         });
@@ -294,9 +326,21 @@ const Profile = () => {
 
       const result = await response.json();
       
-      // Update local state with new data
+      // Update local state with new data from server
       if (result.data?.profile) {
-        setProfile(result.data.profile);
+        setProfile({
+          name: result.data.profile.name || '',
+          year: result.data.profile.year || '',
+          major: result.data.profile.major || '',
+          instagram: result.data.profile.instagram || '',
+          photo: result.data.profile.photo || null,
+          gender: result.data.profile.gender || '',
+          ethnicity: result.data.profile.ethnicity || [],
+          lookingForGender: result.data.profile.lookingForGender || [],
+          lookingForEthnicity: result.data.profile.lookingForEthnicity || [],
+          attractiveness: result.data.profile.attractiveness || 0,
+          optInMatching: result.data.profile.optInMatching || false
+        });
       }
 
       toast.success("profile updated successfully!");
@@ -343,6 +387,73 @@ const Profile = () => {
     setProfileImageFile(null);
   };
 
+  const handleToggleOptIn = () => {
+    if (editingSection) {
+      setEditValues({ ...editValues, optInMatching: !editValues.optInMatching });
+    } else {
+      // When not in edit mode, toggle directly and save
+      const newOptInValue = !profile.optInMatching;
+      handleDirectOptInToggle(newOptInValue);
+    }
+  };
+
+  // Handle opt-in toggle when not in edit mode
+  const handleDirectOptInToggle = async (newValue: boolean) => {
+    if (status !== "authenticated" || !session) {
+      toast.error("you must be logged in to change matching status");
+      return;
+    }
+
+    // Check if trying to opt in without required fields
+    if (newValue && !areRequiredSectionsFilled(profile)) {
+      const missingSections = [];
+      if (!profile.name) missingSections.push('name');
+      if (!profile.year) missingSections.push('year');
+      if (!profile.major) missingSections.push('major');
+      if (!profile.gender) missingSections.push('gender');
+      if (profile.ethnicity.length === 0) missingSections.push('ethnicity');
+      if (!profile.instagram) missingSections.push('instagram');
+      if (!profile.photo) missingSections.push('photo');
+      
+      toast.error(`cannot opt in to matching. please fill: ${missingSections.join(', ')}`);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/user", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...profile,
+          optInMatching: newValue
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "failed to update matching status");
+      }
+
+      const result = await response.json();
+      
+      if (result.data?.profile) {
+        setProfile({
+          ...profile,
+          optInMatching: result.data.profile.optInMatching
+        });
+        toast.success(newValue ? "opted in to matching!" : "opted out of matching");
+      }
+    } catch (err: unknown) {
+      console.error("opt-in toggle error:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      toast.error(message || "failed to update matching status");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
@@ -375,6 +486,7 @@ const Profile = () => {
 
   const renderSectionContent = (section: Section) => {
     const isEditing = editingSection === section.id;
+    const displayData = isEditing ? editValues : profile;
 
     if (!isEditing) {
       switch (section.id) {
@@ -431,6 +543,23 @@ const Profile = () => {
                 {profile.instagram || 'looks.matr'}
               </span>
             </p>
+          );
+        case 'optInMatching':
+          return (
+            <div className="flex items-center justify-between w-full gap-2">
+              <p className="text-sm font-medium text-gray-800 flex-shrink min-w-0">
+                {profile.optInMatching ? 'opted in to matching' : 'opted out of matching'}
+              </p>
+              <button
+                onClick={handleToggleOptIn}
+                className="relative w-12 h-7 flex items-center rounded-full transition-colors duration-300 cursor-pointer flex-shrink-0"
+                disabled={loading}
+              >
+                <span className="sr-only">Opt in to matching</span>
+                <div className={`absolute inset-0 w-12 h-7 rounded-full transition-colors duration-300 ${profile.optInMatching ? 'bg-gray-900' : 'bg-gray-300'}`} />
+                <div className={`absolute left-1 top-1 bg-white w-5 h-5 rounded-full shadow-md transition-transform duration-300 ${profile.optInMatching ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
           );
         case 'lookingFor':
           return (
@@ -570,6 +699,23 @@ const Profile = () => {
           </div>
         );
       
+      case 'optInMatching':
+        return (
+          <div className="flex items-center justify-between w-full gap-2">
+            <p className="text-sm font-medium text-gray-800 flex-shrink min-w-0">
+              {editValues.optInMatching ? 'opted in to matching' : 'opted out of matching'}
+            </p>
+            <button
+              onClick={handleToggleOptIn}
+              className="relative w-12 h-7 flex items-center rounded-full transition-colors duration-300 cursor-pointer flex-shrink-0"
+            >
+              <span className="sr-only">Opt in to matching</span>
+              <div className={`absolute inset-0 w-12 h-7 rounded-full transition-colors duration-300 ${editValues.optInMatching ? 'bg-gray-900' : 'bg-gray-300'}`} />
+              <div className={`absolute left-1 top-1 bg-white w-5 h-5 rounded-full shadow-md transition-transform duration-300 ${editValues.optInMatching ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        );
+      
       case 'lookingFor':
         return (
           <div className="w-full space-y-4">
@@ -601,7 +747,6 @@ const Profile = () => {
     }
   };
 
-  // Show loading state
   if (status === "loading" || (status === "authenticated" && !dataLoaded)) {
     return (
       <>
@@ -611,17 +756,10 @@ const Profile = () => {
         />
         <style>{`
           @keyframes gradientShift {
-            0% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
-            }
-            100% {
-              background-position: 0% 50%;
-            }
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
           }
-          
           .bg-gradient-animated {
             background: linear-gradient(135deg, #dbeafe, #e9d5ff, #fae8ff, #ddd6fe, #bfdbfe);
             background-size: 400% 400%;
@@ -638,7 +776,6 @@ const Profile = () => {
     );
   }
 
-  // Show login prompt if not authenticated
   if (status === "unauthenticated") {
     return (
       <>
@@ -648,17 +785,10 @@ const Profile = () => {
         />
         <style>{`
           @keyframes gradientShift {
-            0% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
-            }
-            100% {
-              background-position: 0% 50%;
-            }
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
           }
-          
           .bg-gradient-animated {
             background: linear-gradient(135deg, #dbeafe, #e9d5ff, #fae8ff, #ddd6fe, #bfdbfe);
             background-size: 400% 400%;
@@ -707,7 +837,7 @@ const Profile = () => {
 
             <div 
               className={`
-                ${isMobile ? `grid grid-cols-2 gap-3 ${editingSection ? 'mb-32' : 'mb-8'}` : 'grid grid-cols-4 gap-2 md:gap-3'} 
+                ${isMobile ? `grid grid-cols-2 gap-3 ${editingSection ? 'mb-32' : 'mb-8'}` : 'grid grid-cols-8 gap-2 md:gap-3'} 
                 w-full
               `} 
               style={isMobile ? {} : { gridAutoRows: 'minmax(110px, auto)' }}
@@ -726,10 +856,8 @@ const Profile = () => {
                       ${isOtherEditing ? 'opacity-20 pointer-events-none' : ''}
                       ${!editingSection ? 'cursor-pointer hover:bg-white/70 hover:shadow-2xl hover:scale-[1.02]' : ''}
                       profile-card backdrop-blur-md bg-white/50 rounded-xl p-3 md:p-5 border-2 border-white/70 transition-all duration-300 flex flex-col overflow-visible
-                      ${isMobile ? 'min-h-[140px]' : ''}
                     `}
                     style={{
-                      minHeight: isMobile ? '140px' : '75px',
                       zIndex: isEditing ? 50 : 1
                     }}
                   >
@@ -740,7 +868,7 @@ const Profile = () => {
                       {section.icon && <section.icon size={14} className="text-gray-600" />}
                     </div>
                     
-                    <div className="flex-1 flex items-start overflow-visible text-xs md:text-base">
+                    <div className="flex-1 flex items-center overflow-visible text-xs md:text-base min-h-0">
                       {renderSectionContent(section)}
                     </div>
                   </div>
@@ -784,55 +912,36 @@ const Profile = () => {
               padding-bottom: max(2rem, env(safe-area-inset-bottom));
             }
           }
-
           .safe-area-inset {
             padding-left: env(safe-area-inset-left);
             padding-right: env(safe-area-inset-right);
             padding-top: env(safe-area-inset-top);
           }
-
           .safe-scroll {
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             -webkit-user-select: text;
           }
-
           @keyframes gradientShift {
-            0% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
-            }
-            100% {
-              background-position: 0% 50%;
-            }
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
           }
-          
           .bg-gradient-animated {
             background: linear-gradient(135deg, #dbeafe, #e9d5ff, #fae8ff, #ddd6fe, #bfdbfe);
             background-size: 400% 400%;
             animation: gradientShift 15s ease infinite;
           }
-
           .tag-gradient {
             background: linear-gradient(135deg, rgba(219, 234, 254, 0.9), rgba(233, 213, 255, 0.9), rgba(250, 232, 255, 0.9), rgba(221, 214, 254, 0.9));
             background-size: 300% 300%;
             animation: tagGradientShift 10s ease infinite;
           }
-
           @keyframes tagGradientShift {
-            0% {
-              background-position: 0% 50%;
-            }
-            50% {
-              background-position: 100% 50%;
-            }
-            100% {
-              background-position: 0% 50%;
-            }
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
           }
-
           @keyframes fadeIn {
             from {
               opacity: 0;
@@ -843,7 +952,6 @@ const Profile = () => {
               transform: translateY(0);
             }
           }
-
           .fade-in {
             animation: fadeIn 0.3s ease-out 0.4s both;
           }

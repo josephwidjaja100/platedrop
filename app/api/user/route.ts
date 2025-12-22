@@ -41,7 +41,9 @@ export async function GET() {
             gender: '',
             ethnicity: [],
             lookingForGender: [],
-            lookingForEthnicity: []
+            lookingForEthnicity: [],
+            optInMatching: false,
+            attractiveness: 0
           },
           email: session.user.email
         }
@@ -61,7 +63,9 @@ export async function GET() {
           gender: '',
           ethnicity: [],
           lookingForGender: [],
-          lookingForEthnicity: []
+          lookingForEthnicity: [],
+          optInMatching: false,
+          attractiveness: 0
         },
         email: user.email || session.user.email
       }
@@ -101,6 +105,8 @@ export async function PUT(request: NextRequest) {
         ethnicity: JSON.parse(formData.get('ethnicity') as string || '[]'),
         lookingForGender: JSON.parse(formData.get('lookingForGender') as string || '[]'),
         lookingForEthnicity: JSON.parse(formData.get('lookingForEthnicity') as string || '[]'),
+        optInMatching: formData.get('optInMatching') === 'true',
+        attractiveness: parseInt(formData.get('attractiveness') as string || '0', 10),
       };
 
       imageFile = formData.get('photo') as File;
@@ -139,7 +145,9 @@ export async function PUT(request: NextRequest) {
       ethnicity: validData.ethnicity,
       lookingForGender: validData.lookingForGender,
       lookingForEthnicity: validData.lookingForEthnicity,
-      photo: validData.photo
+      photo: validData.photo,
+      optInMatching: validData.optInMatching,
+      attractiveness: validData.attractiveness
     };
 
     // Handle profile image upload

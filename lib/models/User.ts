@@ -20,6 +20,7 @@ export interface User {
     lookingForGender: [];
     lookingForEthnicity: [];
     attractiveness: 0;
+    optInMatching: false;
   }
   email?: string;
   createdAt: Date;

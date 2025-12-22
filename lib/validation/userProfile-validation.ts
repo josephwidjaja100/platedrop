@@ -134,6 +134,11 @@ export const IMAGE_LIMITS = {
   allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'] as const,
 } as const;
 
+export const ATTRACTIVENESS_LIMITS = {
+  min: 0,
+  max: 100,
+} as const;
+
 export interface UserProfileData {
   name: string;
   year: string;
@@ -145,6 +150,7 @@ export interface UserProfileData {
   lookingForGender: string[];
   lookingForEthnicity: string[];
   attractiveness: number;
+  optInMatching: boolean;
 }
 
 export interface ProfileImageData {
@@ -289,6 +295,53 @@ export function validateLookingForEthnicity(ethnicities: string[]): { isValid: b
   return { isValid: true };
 }
 
+export function validateAttractiveness(attractiveness: any): { isValid: boolean; error?: string } {
+  // Check if it's a number
+  if (typeof attractiveness !== 'number') {
+    // Try to parse it if it's a string
+    if (typeof attractiveness === 'string') {
+      const parsed = parseFloat(attractiveness);
+      if (isNaN(parsed)) {
+        return { isValid: false, error: 'attractiveness must be a number' };
+      }
+      attractiveness = parsed;
+    } else {
+      return { isValid: false, error: 'attractiveness must be a number' };
+    }
+  }
+
+  // Check if it's finite (not NaN, Infinity, or -Infinity)
+  if (!isFinite(attractiveness)) {
+    return { isValid: false, error: 'attractiveness must be a valid number' };
+  }
+
+  // Check range
+  if (attractiveness < ATTRACTIVENESS_LIMITS.min || attractiveness > ATTRACTIVENESS_LIMITS.max) {
+    return { 
+      isValid: false, 
+      error: `attractiveness must be between ${ATTRACTIVENESS_LIMITS.min} and ${ATTRACTIVENESS_LIMITS.max}` 
+    };
+  }
+
+  return { isValid: true };
+}
+
+export function validateOptInMatching(optInMatching: any): { isValid: boolean; error?: string } {
+  if (typeof optInMatching !== 'boolean') {
+    // Try to convert string representations
+    if (optInMatching === 'true' || optInMatching === true) {
+      return { isValid: true };
+    }
+    if (optInMatching === 'false' || optInMatching === false) {
+      return { isValid: true };
+    }
+    
+    return { isValid: false, error: 'opt in matching must be a boolean value' };
+  }
+
+  return { isValid: true };
+}
+
 export function validateProfileImage(file: File | null): { isValid: boolean; error?: string; validFile?: File } {
   if (!file) {
     return { isValid: true }; // Image is optional
@@ -405,6 +458,18 @@ export function validateProfileData(data: any): { isValid: boolean; error?: stri
   if (!lookingForEthnicityValidation.isValid) {
     return lookingForEthnicityValidation;
   }
+
+  // Validate attractiveness (required)
+  const attractivenessValidation = validateAttractiveness(data.attractiveness ?? 0);
+  if (!attractivenessValidation.isValid) {
+    return attractivenessValidation;
+  }
+
+  // Validate opt in matching (required)
+  const optInMatchingValidation = validateOptInMatching(data.optInMatching ?? false);
+  if (!optInMatchingValidation.isValid) {
+    return optInMatchingValidation;
+  }
   
   const validData: UserProfileData = {
     name: data.name.trim(),
@@ -416,7 +481,8 @@ export function validateProfileData(data: any): { isValid: boolean; error?: stri
     ethnicity: data.ethnicity,
     lookingForGender: data.lookingForGender || [],
     lookingForEthnicity: data.lookingForEthnicity || [],
-    attractiveness: data.attractiveness || 0
+    attractiveness: typeof data.attractiveness === 'string' ? parseFloat(data.attractiveness) : (data.attractiveness || 0),
+    optInMatching: data.optInMatching === 'true' || data.optInMatching === true
   };
   
   return { isValid: true, validData };
