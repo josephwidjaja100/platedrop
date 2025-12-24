@@ -256,7 +256,7 @@ const Profile = () => {
 
     const validation = validateProfileDataWithImage(editValues, profileImageFile);
     if (!validation.isValid) {
-      toast.error(validation.error);
+      toast.error(validation.error + (editingSection=="basic" ? "" : " before submitting " + editingSection));
       return;
     }
 

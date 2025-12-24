@@ -162,7 +162,7 @@ export interface ProfileImageData {
 // Validation functions
 export function validateName(name: string): { isValid: boolean; error?: string } {
   if (!name || typeof name !== 'string') {
-    return { isValid: false, error: 'name is required' };
+    return { isValid: false, error: 'all basic info must be filled' };
   }
   
   const trimmed = name.trim();
@@ -179,7 +179,7 @@ export function validateName(name: string): { isValid: boolean; error?: string }
 
 export function validateYear(year: string): { isValid: boolean; error?: string } {
   if (!year) {
-    return { isValid: false, error: 'year is required' };
+    return { isValid: false, error: 'all basic info must be filled' };
   }
   
   if (!YEAR_OPTIONS.includes(year as any)) {
@@ -191,7 +191,7 @@ export function validateYear(year: string): { isValid: boolean; error?: string }
 
 export function validateMajor(major: string): { isValid: boolean; error?: string } {
   if (!major) {
-    return { isValid: false, error: 'major is required' };
+    return { isValid: false, error: 'all basic info must be filled' };
   }
   
   if (!MAJOR_OPTIONS.includes(major as any)) {
@@ -226,7 +226,7 @@ export function validateInstagram(instagram: string): { isValid: boolean; error?
 
 export function validateGender(gender: string): { isValid: boolean; error?: string } {
   if (!gender) {
-    return { isValid: false, error: 'gender is required' };
+    return { isValid: false, error: 'all basic info must be filled' };
   }
   
   if (!GENDER_OPTIONS.includes(gender as any)) {
