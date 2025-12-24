@@ -5,6 +5,7 @@ import {
 } from '@react-email/components';
 
 type MatchingEmailProps = {
+  name?: string;
   matchName?: string;
   matchYear?: string;
   matchMajor?: string;
@@ -16,6 +17,7 @@ type MatchingEmailProps = {
 };
 
 export default function MatchingEmail({
+  name = 'there',
   matchName = 'Alex',
   matchYear = 'Junior',
   matchMajor = 'Computer Science',
@@ -183,7 +185,7 @@ export default function MatchingEmail({
                         fontFamily: 'Georgia, "Times New Roman", serif',
                       }}
                     >
-                      🎉 here's your match!
+                      here's your match, {name}
                     </div>
                   </td>
                   <td style={{ width: '25%' }}></td>

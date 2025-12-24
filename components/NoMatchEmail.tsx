@@ -4,7 +4,11 @@ import {
   Text,
 } from '@react-email/components';
 
-export default function NoMatchEmail() {
+type NoMatchEmailProps = {
+  name?: string;
+};
+
+export default function NoMatchEmail({ name = 'there' }: NoMatchEmailProps = {}) {
   return (
     <Html>
       <Container style={{ maxWidth: '600px', margin: '0 auto', padding: '20px', fontFamily: 'Georgia, "Times New Roman", serif' }}>
@@ -137,7 +141,7 @@ export default function NoMatchEmail() {
                         fontFamily: 'Georgia, "Times New Roman", serif',
                       }}
                     >
-                      unfortunately not :(
+                      unfortunately not, {name} :(
                     </div>
                   </td>
                   <td style={{ width: '25%' }}></td>

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import client from '@/lib/db';
 import { sendMatchEmail, sendNoMatchEmail } from '@/lib/email-service';
 
+// Helper function to sleep for a specified duration
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function GET(request: NextRequest) {
   try {
     // Verify the request is from Vercel Cron
@@ -273,7 +276,7 @@ export async function GET(request: NextRequest) {
     const unmatchedUsers = users.filter(user => !matchedUserIds.has(user._id.toString()));
 
     // Store matches in database and send emails
-    const emailPromises = matches.map(async (match) => {
+    for (const match of matches) {
       const { user1, user2, score } = match;
       
       // Calculate attractiveness difference (on 100 scale)
@@ -314,27 +317,28 @@ export async function GET(request: NextRequest) {
       // Insert match into database
       await matchesCollection.insertOne(matchDocument);
 
-      // Send email to user1 about user2 (with attractiveness diff)
-      const email1Promise = sendMatchEmail(
+      // Send email to user1 about user2 with 1 second delay
+      await sendMatchEmail(
         user1.email,
+        user1.profile.name,
         profile2
       );
+      await sleep(1000);
 
-      // Send email to user2 about user1 (with attractiveness diff)
-      const email2Promise = sendMatchEmail(
+      // Send email to user2 about user1 with 1 second delay
+      await sendMatchEmail(
         user2.email,
+        user2.profile.name,
         profile1
       );
+      await sleep(1000);
+    }
 
-      return Promise.all([email1Promise, email2Promise]);
-    });
-
-    // Send no-match emails to unmatched users
-    const noMatchEmailPromises = unmatchedUsers.map(async (user) => {
-      return sendNoMatchEmail(user.email);
-    });
-
-    await Promise.all([...emailPromises, ...noMatchEmailPromises]);
+    // Send no-match emails to unmatched users sequentially with delays
+    for (const user of unmatchedUsers) {
+      await sendNoMatchEmail(user.email, user.profile.name);
+      await sleep(1000);
+    }
 
     return NextResponse.json({
       success: true,

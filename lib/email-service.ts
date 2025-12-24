@@ -33,7 +33,8 @@ export const sendOTPEmail = async (email: string, otpCode: string, type: 'signup
 };
 
 export const sendMatchEmail = async (
-  email: string, 
+  email: string,
+  userName: string,
   matchData: {
     name: string;
     year: string;
@@ -51,6 +52,7 @@ export const sendMatchEmail = async (
       to: [email],
       subject: 'you have a new match! 💘',
       react: MatchingEmail({
+        name: userName,
         matchName: matchData.name,
         matchYear: matchData.year,
         matchMajor: matchData.major,
@@ -74,13 +76,13 @@ export const sendMatchEmail = async (
   }
 };
 
-export const sendNoMatchEmail = async (email: string) => {
+export const sendNoMatchEmail = async (email: string, userName: string = 'there') => {
   try {
     const { data, error } = await resend.emails.send({
       from: 'looksmatr <onboarding@resend.dev>',
       to: [email],
       subject: 'we got some bad news for you 😬',
-      react: NoMatchEmail(),
+      react: NoMatchEmail({ name: userName }),
     });
 
     if (error) {
