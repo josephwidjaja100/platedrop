@@ -47,7 +47,7 @@ export const sendMatchEmail = async (
 ) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'looksmatr <matches@looksmatr.com>',
+      from: 'looksmatr <onboarding@resend.dev>',
       to: [email],
       subject: 'you have a new match! 💘',
       react: MatchingEmail({
@@ -77,7 +77,7 @@ export const sendMatchEmail = async (
 export const sendNoMatchEmail = async (email: string) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'looksmatr <matches@looksmatr.com>',
+      from: 'looksmatr <onboarding@resend.dev>',
       to: [email],
       subject: 'we got some bad news for you 😬',
       react: NoMatchEmail(),
