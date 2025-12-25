@@ -27,7 +27,7 @@ interface User {
 interface Edge {
   user1Index: number;
   user2Index: number;
-  weight: number; // Lower weight = better match
+  weight: number;
   user1Id: string;
   user2Id: string;
   compatibility: boolean;
@@ -38,11 +38,18 @@ interface MatchResult {
   user2: User;
   score: number;
   attractivenessDiff: number;
+  matchType?: 'drought-priority' | 'blossom';
 }
 
 interface HistoricalMatch {
   user1Id: string;
   user2Id: string;
+  createdAt: Date;
+}
+
+interface NoMatchRecord {
+  userId: string;
+  weekDate: Date;
   createdAt: Date;
 }
 
@@ -63,12 +70,13 @@ export async function GET(request: NextRequest) {
     const usersCollection = db.collection('users');
     const matchesCollection = db.collection('matches');
     const matchAttemptsCollection = db.collection('match_attempts');
+    const noMatchesCollection = db.collection('no_matches');
 
     // Start a match attempt record
     const attemptResult = await matchAttemptsCollection.insertOne({
       startedAt: new Date(),
       status: 'processing',
-      algorithmVersion: 'v2.0-blossom',
+      algorithmVersion: 'v3.0-drought-priority',
       stats: {}
     });
     attemptId = attemptResult.insertedId;
@@ -97,7 +105,6 @@ export async function GET(request: NextRequest) {
         'profile.optInMatching': 1,
         createdAt: 1
       },
-      sort: { createdAt: 1 } // Prioritize older users waiting longer
     }).toArray() as unknown as User[];
 
     if (users.length < 2) {
@@ -121,7 +128,33 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Step 1: Get ALL historical matches to prevent any rematches
+    // Calculate 5 weeks ago date
+    const fiveWeeksAgo = new Date();
+    fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 35); // 5 weeks = 35 days
+
+    // Step 1: Get drought users (users who had no match in past 5 weeks)
+    const recentNoMatches: NoMatchRecord[] = await noMatchesCollection.find({
+      weekDate: { $gte: fiveWeeksAgo }
+    }).toArray() as unknown as NoMatchRecord[];
+
+    // Group by user and find their earliest no-match week
+    const droughtUserMap = new Map<string, Date>();
+    recentNoMatches.forEach(record => {
+      const userId = record.userId.toString();
+      const existingDate = droughtUserMap.get(userId);
+      if (!existingDate || record.weekDate < existingDate) {
+        droughtUserMap.set(userId, record.weekDate);
+      }
+    });
+
+    // Sort drought users by earliest no-match date (oldest first = highest priority)
+    const droughtUsersPriority = Array.from(droughtUserMap.entries())
+      .sort((a, b) => a[1].getTime() - b[1].getTime())
+      .map(([userId]) => userId);
+
+    console.log(`Found ${droughtUsersPriority.length} drought users to prioritize`);
+
+    // Step 2: Get ALL historical matches to prevent any rematches
     const allHistoricalMatches: HistoricalMatch[] = await matchesCollection.find(
       {},
       { projection: { user1Id: 1, user2Id: 1, createdAt: 1 } }
@@ -135,14 +168,12 @@ export async function GET(request: NextRequest) {
       const user1Id = match.user1Id.toString();
       const user2Id = match.user2Id.toString();
       
-      // Store pair in both directions for easy lookup
       const pairKey1 = `${user1Id}_${user2Id}`;
       const pairKey2 = `${user2Id}_${user1Id}`;
       
       historicalMatchSet.add(pairKey1);
       historicalMatchSet.add(pairKey2);
       
-      // Store by individual user for faster compatibility checking
       if (!historicalMatchesByUser.has(user1Id)) {
         historicalMatchesByUser.set(user1Id, new Set());
       }
@@ -164,39 +195,10 @@ export async function GET(request: NextRequest) {
       indexUserMap.set(index, user);
     });
 
-    // Step 2: Build compatibility graph with edges
+    // Step 3: Build compatibility graph with edges
     const edges: Edge[] = [];
-    const maxWeight = 100; // Maximum attractiveness difference for normalization
+    const maxWeight = 100;
     
-    // Pre-compute gender compatibility matrix for efficiency
-    const genderCompatibleMatrix: boolean[][] = Array(users.length)
-      .fill(null)
-      .map(() => Array(users.length).fill(false));
-    
-    // Pre-compute ethnicity compatibility matrix
-    const ethnicityCompatibleMatrix: boolean[][] = Array(users.length)
-      .fill(null)
-      .map(() => Array(users.length).fill(false));
-    
-    // First pass: compute gender compatibility
-    for (let i = 0; i < users.length; i++) {
-      for (let j = i + 1; j < users.length; j++) {
-        const user1 = users[i];
-        const user2 = users[j];
-        
-        // Check gender preferences
-        const user1Prefs = user1.profile.lookingForGender || [];
-        const user2Prefs = user2.profile.lookingForGender || [];
-        
-        const user1Compatible = user1Prefs.length === 0 || user1Prefs.includes(user2.profile.gender);
-        const user2Compatible = user2Prefs.length === 0 || user2Prefs.includes(user1.profile.gender);
-        
-        genderCompatibleMatrix[i][j] = user1Compatible && user2Compatible;
-        genderCompatibleMatrix[j][i] = user1Compatible && user2Compatible;
-      }
-    }
-    
-    // Second pass: compute ethnicity compatibility and build edges
     for (let i = 0; i < users.length; i++) {
       const user1 = users[i];
       const user1Id = user1._id.toString();
@@ -205,14 +207,20 @@ export async function GET(request: NextRequest) {
         const user2 = users[j];
         const user2Id = user2._id.toString();
         
-        // Skip if already matched historically (primary check)
+        // Skip if already matched historically
         const historicalMatchesForUser1 = historicalMatchesByUser.get(user1Id);
         if (historicalMatchesForUser1?.has(user2Id)) {
           continue;
         }
         
-        // Check gender compatibility (from precomputed matrix)
-        if (!genderCompatibleMatrix[i][j]) {
+        // Check gender preferences
+        const user1Prefs = user1.profile.lookingForGender || [];
+        const user2Prefs = user2.profile.lookingForGender || [];
+        
+        const user1Compatible = user1Prefs.length === 0 || user1Prefs.includes(user2.profile.gender);
+        const user2Compatible = user2Prefs.length === 0 || user2Prefs.includes(user1.profile.gender);
+        
+        if (!user1Compatible || !user2Compatible) {
           continue;
         }
         
@@ -234,33 +242,17 @@ export async function GET(request: NextRequest) {
           user2Ethnicity.includes('prefer not to answer') ||
           user2Ethnicity.some(eth => user1EthPrefs.includes(eth));
         
-        ethnicityCompatibleMatrix[i][j] = user1EthCompatible && user2EthCompatible;
-        ethnicityCompatibleMatrix[j][i] = user1EthCompatible && user2EthCompatible;
-        
-        if (!ethnicityCompatibleMatrix[i][j]) {
+        if (!user1EthCompatible || !user2EthCompatible) {
           continue;
         }
         
         // Calculate attractiveness difference
-        const attractivenessDiff = Math.abs(user1.profile.attractiveness - user2.profile.attractiveness);
-        
-        // Calculate weight: lower is better
-        // We use a combination of attractiveness difference and waiting time
-        const waitingTime1 = Date.now() - new Date(user1.createdAt).getTime();
-        const waitingTime2 = Date.now() - new Date(user2.createdAt).getTime();
-        const maxWaitingTime = 365 * 24 * 60 * 60 * 1000; // 1 year in ms
-        
-        // Normalize waiting time factor (0 to 0.3 weight adjustment)
-        const waitingFactor = 0.3 * ((waitingTime1 + waitingTime2) / (2 * maxWaitingTime));
-        
-        // Final weight: attractiveness diff adjusted by waiting time
-        // Users who waited longer get slightly better matches
-        const weight = attractivenessDiff * (1 - Math.min(waitingFactor, 0.3));
+        const weight = Math.abs(user1.profile.attractiveness - user2.profile.attractiveness);
         
         edges.push({
           user1Index: i,
           user2Index: j,
-          weight: Math.max(0.1, Math.min(weight, maxWeight)), // Clamp weight
+          weight: Math.min(weight, maxWeight),
           user1Id,
           user2Id,
           compatibility: true
@@ -268,43 +260,119 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Step 3: Run Edmonds' Blossom algorithm for optimal matching
-    const matches = findOptimalMatchesWithBlossom(edges, users.length, maxWeight);
-    
-    // Step 4: Process matches with transaction
+    // Step 4: Process drought users first with greedy algorithm
     const matchedUserIds = new Set<string>();
     const successfulMatches: MatchResult[] = [];
     
+    // Filter edges for drought users and sort by priority
+    for (const droughtUserId of droughtUsersPriority) {
+      if (matchedUserIds.has(droughtUserId)) {
+        continue; // Already matched
+      }
+      
+      const droughtUserIndex = userIndexMap.get(droughtUserId);
+      if (droughtUserIndex === undefined) {
+        continue; // User not in current pool
+      }
+      
+      // Get all compatible edges for this drought user
+      const droughtUserEdges = edges.filter(edge => 
+        (edge.user1Index === droughtUserIndex && !matchedUserIds.has(edge.user2Id)) ||
+        (edge.user2Index === droughtUserIndex && !matchedUserIds.has(edge.user1Id))
+      );
+      
+      if (droughtUserEdges.length === 0) {
+        console.log(`No compatible matches found for drought user ${droughtUserId}`);
+        continue;
+      }
+      
+      // Sort by weight (best match first) - greedy approach
+      droughtUserEdges.sort((a, b) => a.weight - b.weight);
+      
+      // Take the best available match
+      const bestEdge = droughtUserEdges[0];
+      const user1 = indexUserMap.get(bestEdge.user1Index)!;
+      const user2 = indexUserMap.get(bestEdge.user2Index)!;
+      const user1Id = user1._id.toString();
+      const user2Id = user2._id.toString();
+      
+      // Mark both users as matched
+      matchedUserIds.add(user1Id);
+      matchedUserIds.add(user2Id);
+      
+      const attractivenessDiff = Math.abs(
+        user1.profile.attractiveness - user2.profile.attractiveness
+      );
+      const score = Math.max(0, 100 - attractivenessDiff);
+      
+      successfulMatches.push({
+        user1,
+        user2,
+        score,
+        attractivenessDiff,
+        matchType: 'drought-priority'
+      });
+      
+      console.log(`Matched drought user ${droughtUserId} with ${user1Id === droughtUserId ? user2Id : user1Id}`);
+    }
+
+    // Step 5: Run Blossom algorithm for remaining users
+    const remainingEdges = edges.filter(edge => 
+      !matchedUserIds.has(edge.user1Id) && !matchedUserIds.has(edge.user2Id)
+    );
+    
+    if (remainingEdges.length > 0) {
+      const blossomMatches = findOptimalMatchesWithBlossom(remainingEdges, users.length, maxWeight);
+      
+      for (const match of blossomMatches) {
+        const user1 = indexUserMap.get(match.user1Index);
+        const user2 = indexUserMap.get(match.user2Index);
+        
+        if (!user1 || !user2) continue;
+        
+        const user1Id = user1._id.toString();
+        const user2Id = user2._id.toString();
+        
+        if (matchedUserIds.has(user1Id) || matchedUserIds.has(user2Id)) {
+          continue;
+        }
+        
+        matchedUserIds.add(user1Id);
+        matchedUserIds.add(user2Id);
+        
+        const attractivenessDiff = Math.abs(
+          user1.profile.attractiveness - user2.profile.attractiveness
+        );
+        const score = Math.max(0, 100 - attractivenessDiff);
+        
+        successfulMatches.push({
+          user1,
+          user2,
+          score,
+          attractivenessDiff,
+          matchType: 'blossom'
+        });
+      }
+    }
+    
+    // Step 6: Save matches to database
     const session = dbClient!.startSession();
     
     try {
       await session.withTransaction(async () => {
-        for (const match of matches) {
-          const user1 = indexUserMap.get(match.user1Index);
-          const user2 = indexUserMap.get(match.user2Index);
-          
-          if (!user1 || !user2) {
-            console.warn(`Invalid user index in match: ${match.user1Index}, ${match.user2Index}`);
-            continue;
-          }
+        for (const match of successfulMatches) {
+          const { user1, user2, attractivenessDiff, score, matchType } = match;
           
           const user1Id = user1._id.toString();
           const user2Id = user2._id.toString();
           
-          // Final sanity check: ensure no historical match
+          // Final sanity check
           if (historicalMatchesByUser.get(user1Id)?.has(user2Id) ||
               historicalMatchesByUser.get(user2Id)?.has(user1Id)) {
             console.warn(`Attempted to create duplicate match between ${user1Id} and ${user2Id}`);
             continue;
           }
           
-          // Calculate metrics
-          const attractivenessDiff = Math.abs(
-            user1.profile.attractiveness - user2.profile.attractiveness
-          );
-          const score = Math.max(0, 100 - attractivenessDiff);
-          
-          // Prepare profiles
           const profile1 = {
             name: user1.profile.name,
             year: user1.profile.year,
@@ -329,46 +397,48 @@ export async function GET(request: NextRequest) {
             matchScore: score
           };
           
-          // Create match document
           const matchDocument = {
             user1Id: user1._id,
             user2Id: user2._id,
             score,
             attractivenessDiff,
-            algorithmVersion: 'v2.0-blossom',
+            algorithmVersion: 'v3.0-drought-priority',
+            matchType,
             matchAttemptId: attemptId,
             createdAt: new Date(),
             user1Profile: profile1,
             user2Profile: profile2,
-            // Store both ID formats for easy querying
             userIds: [user1Id, user2Id],
             userIdPairs: [`${user1Id}_${user2Id}`, `${user2Id}_${user1Id}`]
           };
           
-          // Insert match
           await matchesCollection.insertOne(matchDocument, { session });
           
-          // Update historical match tracking for this session
           historicalMatchesByUser.get(user1Id)?.add(user2Id);
           historicalMatchesByUser.get(user2Id)?.add(user1Id);
-          
-          // Track matched users
-          matchedUserIds.add(user1Id);
-          matchedUserIds.add(user2Id);
-          
-          successfulMatches.push({
-            user1,
-            user2,
-            score,
-            attractivenessDiff
-          });
         }
       });
     } finally {
       await session.endSession();
     }
     
-    // Step 5: Send emails with robust error handling and rate limiting
+    // Step 7: Record no-matches for this week
+    const currentWeekDate = new Date();
+    currentWeekDate.setHours(0, 0, 0, 0); // Normalize to start of day
+    
+    const unmatchedUsers = users.filter(user => !matchedUserIds.has(user._id.toString()));
+    
+    if (unmatchedUsers.length > 0) {
+      const noMatchRecords = unmatchedUsers.map(user => ({
+        userId: user._id.toString(),
+        weekDate: currentWeekDate,
+        createdAt: new Date()
+      }));
+      
+      await noMatchesCollection.insertMany(noMatchRecords);
+    }
+    
+    // Step 8: Send emails
     type MatchEmailJob = {
       type: 'match';
       email: string;
@@ -391,7 +461,7 @@ export async function GET(request: NextRequest) {
     
     // Queue match emails
     for (const match of successfulMatches) {
-      const { user1, user2, attractivenessDiff } = match;
+      const { user1, user2, attractivenessDiff, score } = match;
       
       const profile1 = {
         name: user1.profile.name,
@@ -402,7 +472,7 @@ export async function GET(request: NextRequest) {
         instagram: user1.profile.instagram,
         photo: user1.profile.photo,
         attractivenessDiff,
-        matchScore: match.score
+        matchScore: score
       };
       
       const profile2 = {
@@ -414,7 +484,7 @@ export async function GET(request: NextRequest) {
         instagram: user2.profile.instagram,
         photo: user2.profile.photo,
         attractivenessDiff,
-        matchScore: match.score
+        matchScore: score
       };
       
       emailQueue.push({
@@ -434,9 +504,7 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // Queue no-match emails for unmatched users
-    const unmatchedUsers = users.filter(user => !matchedUserIds.has(user._id.toString()));
-    
+    // Queue no-match emails
     for (const user of unmatchedUsers) {
       emailQueue.push({
         type: 'no-match',
@@ -446,7 +514,7 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // Process email queue with rate limiting and retries
+    // Process email queue
     const EMAIL_DELAY_MS = 1000;
     const MAX_RETRIES = 2;
     
@@ -474,20 +542,25 @@ export async function GET(request: NextRequest) {
             });
           } else {
             console.warn(`Retry ${retries} for email to ${emailJob.email}`);
-            await new Promise(resolve => setTimeout(resolve, 2000 * retries)); // Exponential backoff
+            await new Promise(resolve => setTimeout(resolve, 2000 * retries));
           }
         }
       }
       
-      // Rate limiting between emails
       await new Promise(resolve => setTimeout(resolve, EMAIL_DELAY_MS));
     }
     
-    // Step 6: Update attempt record with comprehensive stats
+    // Step 9: Update attempt record
+    const droughtMatchCount = successfulMatches.filter(m => m.matchType === 'drought-priority').length;
+    const blossomMatchCount = successfulMatches.filter(m => m.matchType === 'blossom').length;
+    
     const stats = {
       totalUsers: users.length,
       matchedUsers: matchedUserIds.size,
       matchesCreated: successfulMatches.length,
+      droughtUsersFound: droughtUsersPriority.length,
+      droughtMatches: droughtMatchCount,
+      blossomMatches: blossomMatchCount,
       unmatchedUsers: unmatchedUsers.length,
       totalEdges: edges.length,
       matchRate: users.length > 0 ? (matchedUserIds.size / users.length) * 100 : 0
@@ -519,11 +592,7 @@ export async function GET(request: NextRequest) {
         $set: { 
           completedAt: new Date(),
           status: 'completed',
-          stats,
-          algorithmStats: {
-            edgesConsidered: edges.length,
-            usersWithNoCompatibleEdges: users.length - Array.from(new Set(edges.flatMap(e => [e.user1Index, e.user2Index]))).length
-          }
+          stats
         }
       }
     );
@@ -532,15 +601,14 @@ export async function GET(request: NextRequest) {
       success: true,
       attemptId: attemptId.toString(),
       stats,
-      algorithm: 'edmonds-blossom',
-      historicalMatchesChecked: allHistoricalMatches.length,
-      guarantee: 'No user will ever be matched with someone they were previously matched with'
+      algorithm: 'drought-priority-with-blossom',
+      droughtUsersPrioritized: droughtUsersPriority.length,
+      guarantee: 'Drought users (no match in past 5 weeks) are matched first with greedy algorithm'
     });
     
   } catch (error) {
     console.error('Matching cron job error:', error);
     
-    // Update attempt record with error
     if (dbClient && attemptId) {
       try {
         const db = dbClient.db('platedrop');
@@ -576,10 +644,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * Find optimal matches using Edmonds' Blossom algorithm
- * This ensures maximum matching with minimum total weight
- */
 function findOptimalMatchesWithBlossom(
   edges: Edge[], 
   userCount: number, 
@@ -588,8 +652,6 @@ function findOptimalMatchesWithBlossom(
   
   if (edges.length === 0) return [];
   
-  // Prepare data for blossom algorithm
-  // Blossom expects [i, j, weight] where weight is a cost (lower is better)
   const blossomEdges: [number, number, number][] = edges.map(edge => [
     edge.user1Index,
     edge.user2Index,
@@ -597,19 +659,15 @@ function findOptimalMatchesWithBlossom(
   ]);
   
   try {
-    // Run blossom algorithm for maximum matching with minimum weight
-    const result = blossom(blossomEdges, true); // true = max cardinality
+    const result = blossom(blossomEdges, true);
     
-    // Process result into matches
     const matches: Array<{user1Index: number; user2Index: number; weight: number}> = [];
     const processed = new Set<number>();
     
     for (let i = 0; i < result.length; i++) {
       const partner = result[i];
       
-      // blossom returns -1 for unmatched vertices, otherwise partner index
       if (partner !== -1 && !processed.has(i) && !processed.has(partner)) {
-        // Find the original edge to get weight
         const edge = edges.find(e => 
           (e.user1Index === i && e.user2Index === partner) ||
           (e.user1Index === partner && e.user2Index === i)
@@ -631,21 +689,15 @@ function findOptimalMatchesWithBlossom(
     return matches;
   } catch (error) {
     console.error('Blossom algorithm error:', error);
-    
-    // Fallback to greedy matching if blossom fails
     console.log('Falling back to greedy matching');
     return findGreedyMatches(edges);
   }
 }
 
-/**
- * Fallback greedy matching algorithm
- */
 function findGreedyMatches(edges: Edge[]): Array<{user1Index: number; user2Index: number; weight: number}> {
   const matches: Array<{user1Index: number; user2Index: number; weight: number}> = [];
   const matched = new Set<number>();
   
-  // Sort edges by weight (best matches first)
   const sortedEdges = [...edges].sort((a, b) => a.weight - b.weight);
   
   for (const edge of sortedEdges) {
