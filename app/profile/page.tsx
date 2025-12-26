@@ -356,10 +356,8 @@ const Profile = () => {
             ...prev,
             attractiveness: analyzeResult.data.attractiveness
           }));
-          toast.success(`photo analysis complete! get ready to match!`);
-        } else {
-          toast.warning("photo uploaded but analysis failed, please try again");
         }
+        toast.success("photo uploaded successfully!")
       }
       else{
         toast.success("profile updated successfully!");

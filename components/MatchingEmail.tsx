@@ -129,7 +129,7 @@ export default function MatchingEmail({
                         fontFamily: 'Georgia, "Times New Roman", serif',
                       }} 
                     >
-                        hey... got any matches for me?
+                        hey... got a match?
                     </div>
                   </td>
                 </tr>
@@ -152,7 +152,7 @@ export default function MatchingEmail({
                         fontFamily: 'Georgia, "Times New Roman", serif',
                       }}
                     >
-                        please make them as attractive as me
+                        (please make them as attractive as me)
                     </div>
                   </td>
                 </tr>

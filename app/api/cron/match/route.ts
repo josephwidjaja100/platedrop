@@ -3,6 +3,7 @@ import client from '@/lib/db';
 import { sendMatchEmail, sendNoMatchEmail } from '@/lib/email-service';
 import { MongoClient } from 'mongodb';
 import blossom from 'edmonds-blossom';
+import { Client } from "@gradio/client";
 
 // Interface definitions
 interface User {
@@ -53,6 +54,34 @@ interface NoMatchRecord {
   createdAt: Date;
 }
 
+async function analyzeUserAttractiveness(imageUrl: string): Promise<number> {
+  try {
+    // Fetch the image and convert to blob
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error('failed to fetch image from url');
+    }
+    
+    const imageBlob = await imageResponse.blob();
+    
+    const model = await Client.connect("jwidhaha/looksmatr");
+    const result = await model.predict(
+      "/analyze", {
+        image: imageBlob,
+        identifier: "person",
+    });
+    
+    // Extract attractiveness score from the result
+    const attractiveness = parseFloat((result.data as string[])[0]) || 0;
+    
+    console.log('Extracted attractiveness score:', attractiveness);
+    return attractiveness;
+  } catch (error) {
+    console.error('Error analyzing attractiveness:', error);
+    throw error;
+  }
+}
+
 export async function GET(request: NextRequest) {
   let dbClient: MongoClient | null = null;
   let attemptId: any = null;
@@ -76,16 +105,15 @@ export async function GET(request: NextRequest) {
     const attemptResult = await matchAttemptsCollection.insertOne({
       startedAt: new Date(),
       status: 'processing',
-      algorithmVersion: 'v3.0-drought-priority',
+      algorithmVersion: 'v3.1-drought-priority-auto-analysis',
       stats: {}
     });
     attemptId = attemptResult.insertedId;
 
-    // Get all eligible users
+    // Get all potentially eligible users (including those with attractiveness: 0)
     const users: User[] = await usersCollection.find({
       'profile.optInMatching': true,
       'profile.name': { $exists: true, $ne: null },
-      'profile.attractiveness': { $gt: 0, $exists: true },
       'profile.gender': { $exists: true, $ne: null },
       'profile.instagram': { $exists: true, $ne: null },
       'profile.photo': { $exists: true, $ne: null }
@@ -125,6 +153,84 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ 
         message: 'Not enough users to match',
         count: users.length 
+      });
+    }
+
+    // Analyze users with attractiveness: 0
+    const usersToAnalyze = users.filter(user => 
+      user.profile.attractiveness === 0 && user.profile.photo
+    );
+    
+    console.log(`Found ${usersToAnalyze.length} users needing attractiveness analysis`);
+    
+    const analysisResults: Array<{ userId: string; success: boolean; attractiveness?: number; error?: string }> = [];
+    
+    for (const user of usersToAnalyze) {
+      try {
+        console.log(`Analyzing attractiveness for user ${user._id.toString()}`);
+        const attractiveness = await analyzeUserAttractiveness(user.profile.photo);
+        
+        // Update user in database
+        await usersCollection.updateOne(
+          { _id: user._id },
+          { 
+            $set: {
+              'profile.attractiveness': attractiveness,
+              updatedAt: new Date()
+            }
+          }
+        );
+        
+        // Update in-memory user object
+        user.profile.attractiveness = attractiveness;
+        
+        analysisResults.push({
+          userId: user._id.toString(),
+          success: true,
+          attractiveness
+        });
+        
+        console.log(`Successfully analyzed user ${user._id.toString()}: ${attractiveness}`);
+        
+        // Add a small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.error(`Failed to analyze user ${user._id.toString()}:`, error);
+        analysisResults.push({
+          userId: user._id.toString(),
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    // Filter users who still have attractiveness > 0 after analysis attempts
+    const eligibleUsers = users.filter(user => user.profile.attractiveness > 0);
+    
+    if (eligibleUsers.length < 2) {
+      await matchAttemptsCollection.updateOne(
+        { _id: attemptId },
+        { 
+          $set: { 
+            completedAt: new Date(),
+            status: 'completed',
+            stats: { 
+              totalUsers: users.length,
+              usersAnalyzed: usersToAnalyze.length,
+              analysisSuccesses: analysisResults.filter(r => r.success).length,
+              analysisFailures: analysisResults.filter(r => !r.success).length,
+              eligibleUsers: eligibleUsers.length,
+              matchesCreated: 0, 
+              reason: 'Not enough eligible users after analysis' 
+            }
+          }
+        }
+      );
+      return NextResponse.json({ 
+        message: 'Not enough eligible users to match after analysis',
+        totalUsers: users.length,
+        eligibleUsers: eligibleUsers.length,
+        analysisResults
       });
     }
 
@@ -185,11 +291,11 @@ export async function GET(request: NextRequest) {
       historicalMatchesByUser.get(user2Id)!.add(user1Id);
     });
 
-    // Create index mapping for users
+    // Create index mapping for eligible users only
     const userIndexMap = new Map<string, number>();
     const indexUserMap = new Map<number, User>();
     
-    users.forEach((user, index) => {
+    eligibleUsers.forEach((user, index) => {
       const userId = user._id.toString();
       userIndexMap.set(userId, index);
       indexUserMap.set(index, user);
@@ -199,17 +305,22 @@ export async function GET(request: NextRequest) {
     const edges: Edge[] = [];
     const maxWeight = 100;
     
-    for (let i = 0; i < users.length; i++) {
-      const user1 = users[i];
+    for (let i = 0; i < eligibleUsers.length; i++) {
+      const user1 = eligibleUsers[i];
       const user1Id = user1._id.toString();
       
-      for (let j = i + 1; j < users.length; j++) {
-        const user2 = users[j];
+      for (let j = i + 1; j < eligibleUsers.length; j++) {
+        const user2 = eligibleUsers[j];
         const user2Id = user2._id.toString();
         
         // Skip if already matched historically
         const historicalMatchesForUser1 = historicalMatchesByUser.get(user1Id);
         if (historicalMatchesForUser1?.has(user2Id)) {
+          continue;
+        }
+        
+        // Check if same year/grade level
+        if (user1.profile.year !== user2.profile.year) {
           continue;
         }
         
@@ -252,7 +363,7 @@ export async function GET(request: NextRequest) {
         edges.push({
           user1Index: i,
           user2Index: j,
-          weight: Math.min(weight, maxWeight),
+          weight: Math.max(0.1, Math.min(weight, maxWeight)),
           user1Id,
           user2Id,
           compatibility: true
@@ -322,7 +433,7 @@ export async function GET(request: NextRequest) {
     );
     
     if (remainingEdges.length > 0) {
-      const blossomMatches = findOptimalMatchesWithBlossom(remainingEdges, users.length, maxWeight);
+      const blossomMatches = findOptimalMatchesWithBlossom(remainingEdges, eligibleUsers.length, maxWeight);
       
       for (const match of blossomMatches) {
         const user1 = indexUserMap.get(match.user1Index);
@@ -402,7 +513,7 @@ export async function GET(request: NextRequest) {
             user2Id: user2._id,
             score,
             attractivenessDiff,
-            algorithmVersion: 'v3.0-drought-priority',
+            algorithmVersion: 'v3.1-drought-priority-auto-analysis',
             matchType,
             matchAttemptId: attemptId,
             createdAt: new Date(),
@@ -426,7 +537,7 @@ export async function GET(request: NextRequest) {
     const currentWeekDate = new Date();
     currentWeekDate.setHours(0, 0, 0, 0); // Normalize to start of day
     
-    const unmatchedUsers = users.filter(user => !matchedUserIds.has(user._id.toString()));
+    const unmatchedUsers = eligibleUsers.filter(user => !matchedUserIds.has(user._id.toString()));
     
     if (unmatchedUsers.length > 0) {
       const noMatchRecords = unmatchedUsers.map(user => ({
@@ -556,6 +667,10 @@ export async function GET(request: NextRequest) {
     
     const stats = {
       totalUsers: users.length,
+      usersAnalyzed: usersToAnalyze.length,
+      analysisSuccesses: analysisResults.filter(r => r.success).length,
+      analysisFailures: analysisResults.filter(r => !r.success).length,
+      eligibleUsers: eligibleUsers.length,
       matchedUsers: matchedUserIds.size,
       matchesCreated: successfulMatches.length,
       droughtUsersFound: droughtUsersPriority.length,
@@ -563,7 +678,7 @@ export async function GET(request: NextRequest) {
       blossomMatches: blossomMatchCount,
       unmatchedUsers: unmatchedUsers.length,
       totalEdges: edges.length,
-      matchRate: users.length > 0 ? (matchedUserIds.size / users.length) * 100 : 0
+      matchRate: eligibleUsers.length > 0 ? (matchedUserIds.size / eligibleUsers.length) * 100 : 0
     };
     
     if (successfulMatches.length > 0) {
@@ -592,7 +707,8 @@ export async function GET(request: NextRequest) {
         $set: { 
           completedAt: new Date(),
           status: 'completed',
-          stats
+          stats,
+          analysisResults
         }
       }
     );
@@ -601,9 +717,10 @@ export async function GET(request: NextRequest) {
       success: true,
       attemptId: attemptId.toString(),
       stats,
-      algorithm: 'drought-priority-with-blossom',
+      analysisResults,
+      algorithm: 'drought-priority-with-blossom-auto-analysis',
       droughtUsersPrioritized: droughtUsersPriority.length,
-      guarantee: 'Drought users (no match in past 5 weeks) are matched first with greedy algorithm'
+      guarantee: 'Drought users (no match in past 5 weeks) are matched first with greedy algorithm. Users with attractiveness=0 are automatically analyzed.'
     });
     
   } catch (error) {

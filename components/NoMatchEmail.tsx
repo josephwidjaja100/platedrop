@@ -108,7 +108,7 @@ export default function NoMatchEmail({ name = 'there' }: NoMatchEmailProps = {})
                         fontFamily: 'Georgia, "Times New Roman", serif',
                       }} 
                     >
-                        hey... got any matches for me?
+                        hey... got a match?
                     </div>
                   </td>
                 </tr>
