@@ -292,6 +292,7 @@ const Profile = () => {
         formData.append('lookingForEthnicity', JSON.stringify(editValues.lookingForEthnicity));
         formData.append('optInMatching', editValues.optInMatching.toString());
         formData.append('photo', profileImageFile);
+        formData.append('attractiveness', editValues.attractiveness.toString());
 
         response = await fetch("/api/user", {
           method: "PUT",
@@ -311,7 +312,8 @@ const Profile = () => {
             lookingForGender: editValues.lookingForGender,
             lookingForEthnicity: editValues.lookingForEthnicity,
             optInMatching: editValues.optInMatching,
-            photo: editValues.photo
+            photo: editValues.photo,
+            attractiveness: editValues.attractiveness
           }),
         });
       }
@@ -356,6 +358,7 @@ const Profile = () => {
             ...prev,
             attractiveness: analyzeResult.data.attractiveness
           }));
+          editValues.attractiveness = analyzeResult.data.attractiveness;
         }
         toast.success("photo uploaded successfully!")
       }
