@@ -360,6 +360,13 @@ const Profile = () => {
           }));
           editValues.attractiveness = analyzeResult.data.attractiveness;
         }
+        else{
+          setProfile(prev => ({
+            ...prev,
+            attractiveness: 0
+          }));
+          editValues.attractiveness = 0;
+        }
         toast.success("photo uploaded successfully!")
       }
       else{
