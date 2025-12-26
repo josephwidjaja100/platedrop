@@ -185,7 +185,7 @@ export default function MatchingEmail({
                         fontFamily: 'Georgia, "Times New Roman", serif',
                       }}
                     >
-                      here's your match, {name}
+                      here's your match, {name} ❤️
                     </div>
                   </td>
                   <td style={{ width: '25%' }}></td>
@@ -248,7 +248,7 @@ export default function MatchingEmail({
                       }}
                     />
                   </td>
-                  <td style={{ width: '75%', textAlign: 'left' }}>
+                  <td style={{ width: '80%', textAlign: 'left' }}>
                     <div
                       style={{
                         backgroundColor: '#e4e4e7',
