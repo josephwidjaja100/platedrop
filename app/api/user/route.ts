@@ -77,6 +77,8 @@ export async function GET() {
       { error: 'internal server error' },
       { status: 500 }
     );
+  } finally {
+    await client.close();
   }
 }
 
@@ -197,5 +199,7 @@ export async function PUT(request: NextRequest) {
       { error: 'internal server error' },
       { status: 500 }
     );
+  } finally {
+    await client.close();
   }
 }

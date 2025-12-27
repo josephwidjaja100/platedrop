@@ -150,5 +150,7 @@ export async function POST(request: NextRequest) {
       { success: false, message: 'internal server error' },
       { status: 500 }
     );
+  } finally {
+    await client.close();
   }
 }
