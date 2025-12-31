@@ -21,6 +21,8 @@ export interface User {
     lookingForEthnicity: [];
     attractiveness: 0;
     optInMatching: false;
+    onboardingCompleted?: boolean;
+    adjectivePreferences?: string[];
   }
   email?: string;
   createdAt: Date;

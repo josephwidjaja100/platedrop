@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import Dropdown from '@/components/Dropdown';
 import MultiselectDropdown from '@/components/MultiselectDropdown';
 import PhotoEditor from '@/components/PhotoEditor';
+import AdjectiveSelection from '@/components/AdjectiveSelection';
 import { validateProfileDataWithImage } from '@/lib/validation/userProfile-validation';
 
 const Profile = () => {
@@ -39,6 +40,8 @@ const Profile = () => {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [tempImageUrl, setTempImageUrl] = useState<string | null>(null);
+  const [showAdjectiveSelection, setShowAdjectiveSelection] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -191,6 +194,19 @@ const Profile = () => {
             optInMatching: data.profile.optInMatching || false
           };
           setProfile(profileData);
+          
+          // Check if user has basic info filled
+          const hasBasic = profileData.name && profileData.year && profileData.major && 
+                          profileData.gender && profileData.ethnicity.length > 0;
+          
+          // Check onboarding status
+          const completed = data.onboardingCompleted || data.profile.onboardingCompleted || false;
+          setOnboardingCompleted(completed);
+          
+          // Show adjective selection if user has basic info but hasn't completed onboarding
+          if (hasBasic && !completed) {
+            setShowAdjectiveSelection(true);
+          }
         }
         setDataLoaded(true);
       } catch (error) {
@@ -326,7 +342,7 @@ const Profile = () => {
       const result = await response.json();
       
       if (result.data?.profile) {
-        setProfile({
+        const updatedProfile = {
           name: result.data.profile.name || '',
           year: result.data.profile.year || '',
           major: result.data.profile.major || '',
@@ -338,7 +354,21 @@ const Profile = () => {
           lookingForEthnicity: result.data.profile.lookingForEthnicity || [],
           attractiveness: result.data.profile.attractiveness || 0,
           optInMatching: result.data.profile.optInMatching || false
-        });
+        };
+        setProfile(updatedProfile);
+        
+        // Check if user just filled basic info for the first time
+        const hasBasic = updatedProfile.name && updatedProfile.year && updatedProfile.major && 
+                        updatedProfile.gender && updatedProfile.ethnicity.length > 0;
+        
+        // Show adjective selection if user just saved basic info section and hasn't done onboarding
+        // Only show if they actually have some basic info filled
+        if (hasBasic && !onboardingCompleted && editingSection === 'basic') {
+          // Small delay to let the save animation complete
+          setTimeout(() => {
+            setShowAdjectiveSelection(true);
+          }, 500);
+        }
       }
 
       if (shouldAnalyze && result.data?.profile?.photo) {
@@ -444,6 +474,46 @@ const Profile = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleAdjectiveSelectionComplete = async (selections: string[]) => {
+    try {
+      const response = await fetch("/api/user", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profile.name,
+          year: profile.year,
+          major: profile.major,
+          instagram: profile.instagram || '',
+          gender: profile.gender,
+          ethnicity: profile.ethnicity,
+          lookingForGender: profile.lookingForGender,
+          lookingForEthnicity: profile.lookingForEthnicity,
+          optInMatching: profile.optInMatching,
+          photo: profile.photo,
+          attractiveness: profile.attractiveness,
+          onboardingCompleted: true,
+          adjectivePreferences: selections
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("failed to save preferences");
+      }
+
+      setOnboardingCompleted(true);
+      setShowAdjectiveSelection(false);
+      toast.success("preferences saved!");
+    } catch (error) {
+      console.error("error saving preferences:", error);
+      toast.error("failed to save preferences");
+    }
+  };
+
+  const handleAdjectiveSelectionSkip = () => {
+    setShowAdjectiveSelection(false);
+    setOnboardingCompleted(true);
   };
 
   const renderSectionContent = (section: Section) => {
@@ -859,6 +929,13 @@ const Profile = () => {
             imageUrl={tempImageUrl}
             onSave={handlePhotoEditorSave}
             onCancel={handlePhotoEditorCancel}
+          />
+        )}
+
+        {showAdjectiveSelection && (
+          <AdjectiveSelection
+            onComplete={handleAdjectiveSelectionComplete}
+            onSkip={handleAdjectiveSelectionSkip}
           />
         )}
 
