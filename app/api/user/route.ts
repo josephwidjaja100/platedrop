@@ -22,7 +22,8 @@ export async function GET() {
         projection: { 
           _id: 1,
           profile: 1,
-          email: 1
+          email: 1,
+          onboardingCompleted: 1
         } 
       }
     );
@@ -43,9 +44,12 @@ export async function GET() {
             lookingForGender: [],
             lookingForEthnicity: [],
             optInMatching: false,
-            attractiveness: 0
+            attractiveness: 0,
+            onboardingCompleted: false,
+            adjectivePreferences: []
           },
-          email: session.user.email
+          email: session.user.email,
+          onboardingCompleted: false
         }
       });
     }
@@ -65,9 +69,12 @@ export async function GET() {
           lookingForGender: [],
           lookingForEthnicity: [],
           optInMatching: false,
-          attractiveness: 0
+          attractiveness: 0,
+          onboardingCompleted: false,
+          adjectivePreferences: []
         },
-        email: user.email || session.user.email
+        email: user.email || session.user.email,
+        onboardingCompleted: user.onboardingCompleted || false
       }
     });
 
@@ -122,35 +129,58 @@ export async function PUT(request: NextRequest) {
       requestData = await request.json();
     }
 
-    // Server-side validation
-    const validation = validateProfileDataWithImage(requestData, imageFile);
-    if (!validation.isValid) {
-      console.error('validation failed:', validation.error);
-      console.error('request data:', requestData);
-      return NextResponse.json({ error: validation.error }, { status: 400 });
-    }
+    // Extract onboarding fields before validation (they're optional)
+    const onboardingCompleted = requestData.onboardingCompleted;
+    const adjectivePreferences = requestData.adjectivePreferences;
 
-    const validData = validation.validData!;
-    const validImage = validation.validImage;
+    // Server-side validation (only if we have profile data to validate)
+    // Skip validation if this is just an onboarding update
+    let validData: any = null;
+    let validImage: File | null = null;
+    
+    if (requestData.name || requestData.year || requestData.major || imageFile) {
+      const validation = validateProfileDataWithImage(requestData, imageFile);
+      if (!validation.isValid) {
+        console.error('validation failed:', validation.error);
+        console.error('request data:', requestData);
+        return NextResponse.json({ error: validation.error }, { status: 400 });
+      }
+      validData = validation.validData!;
+      validImage = validation.validImage;
+    } else if (onboardingCompleted === undefined && adjectivePreferences === undefined) {
+      // No profile data and no onboarding data - invalid request
+      return NextResponse.json({ error: 'no data provided' }, { status: 400 });
+    }
 
     await client.connect();
     const db = client.db('platedrop');
     const usersCollection = db.collection('users');
 
     // Structure data according to User interface
-    const profileUpdate: { [key: string]: any } = {
-      name: validData.name,
-      year: validData.year,
-      major: validData.major,
-      instagram: validData.instagram || '',
-      gender: validData.gender,
-      ethnicity: validData.ethnicity,
-      lookingForGender: validData.lookingForGender,
-      lookingForEthnicity: validData.lookingForEthnicity,
-      photo: validData.photo,
-      optInMatching: validData.optInMatching,
-      attractiveness: validData.attractiveness
-    };
+    const profileUpdate: { [key: string]: any } = {};
+    
+    // Only update profile fields if we have valid data
+    if (validData) {
+      profileUpdate.name = validData.name;
+      profileUpdate.year = validData.year;
+      profileUpdate.major = validData.major;
+      profileUpdate.instagram = validData.instagram || '';
+      profileUpdate.gender = validData.gender;
+      profileUpdate.ethnicity = validData.ethnicity;
+      profileUpdate.lookingForGender = validData.lookingForGender;
+      profileUpdate.lookingForEthnicity = validData.lookingForEthnicity;
+      profileUpdate.photo = validData.photo;
+      profileUpdate.optInMatching = validData.optInMatching;
+      profileUpdate.attractiveness = validData.attractiveness;
+    }
+
+    // Handle onboarding fields if provided (always update these)
+    if (onboardingCompleted !== undefined) {
+      profileUpdate.onboardingCompleted = onboardingCompleted;
+    }
+    if (adjectivePreferences !== undefined) {
+      profileUpdate.adjectivePreferences = adjectivePreferences;
+    }
 
     // Handle profile image upload
     if (validImage) {
@@ -170,10 +200,22 @@ export async function PUT(request: NextRequest) {
     }
 
     // Structure the update object correctly
+    // If we only have onboarding fields, update them directly on profile
+    // Otherwise, update the entire profile object
     const updateData: { [key: string]: any } = {
-      profile: profileUpdate,
       updatedAt: new Date()
     };
+    
+    if (Object.keys(profileUpdate).length > 0) {
+      // Get existing profile to merge with new data
+      const existingUser = await usersCollection.findOne(
+        { email: session.user.email },
+        { projection: { profile: 1 } }
+      );
+      
+      const existingProfile = existingUser?.profile || {};
+      updateData.profile = { ...existingProfile, ...profileUpdate };
+    }
 
     const result = await usersCollection.updateOne(
       { email: session.user.email },
