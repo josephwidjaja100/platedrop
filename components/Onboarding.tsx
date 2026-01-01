@@ -132,7 +132,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         rel="stylesheet" 
       />
       <div 
-        className="fixed inset-0 bg-gradient-onboarding flex items-center justify-center z-50 p-4"
+        className="fixed inset-0 bg-gradient-animated flex items-center justify-center z-50 p-4"
         style={{ 
           fontFamily: 'Merriweather, serif',
           paddingTop: 'max(1rem, env(safe-area-inset-top))',
@@ -238,10 +238,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             100% { background-position: 0% 50%; }
           }
           
-          .bg-gradient-onboarding {
-            background: linear-gradient(135deg, #f5f3ff, #faf5ff, #fdf4ff, #f3e8ff, #ede9fe);
+          .bg-gradient-animated {
+            background: linear-gradient(135deg, #dbeafe, #e9d5ff, #fae8ff, #ddd6fe, #bfdbfe);
             background-size: 400% 400%;
-            animation: gradientShift 25s ease infinite;
+            animation: gradientShift 15s ease infinite;
           }
           
           .shadow-onboarding {
