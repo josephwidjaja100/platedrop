@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
       expiresAt,
     };
 
+    // Insert OTP
     await otpCollection.insertOne(otpDoc);
 
     // Send email
@@ -147,10 +148,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('error sending OTP:', error);
     return NextResponse.json(
-      { success: false, message: 'internal server error' },
+      { success: false, message: 'service temporarily unavailable. please try again later.' },
       { status: 500 }
     );
   } finally {
-    await client.close();
+    try {
+      await client.close();
+    } catch (closeError) {
+      // Ignore close errors
+    }
   }
 }

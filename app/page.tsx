@@ -122,6 +122,11 @@ const Home = () => {
         }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'network error' }));
+        throw new Error(errorData.message || `HTTP error: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -147,9 +152,15 @@ const Home = () => {
         }
       }
     } catch (error) {
+      console.error('Signup error:', error);
+      // Filter out technical MongoDB errors
+      let errorMessage = error instanceof Error ? error.message : 'network error. please try again.';
+      if (errorMessage.includes('EREFUSED') || errorMessage.includes('queryTxt') || errorMessage.includes('mongodb')) {
+        errorMessage = 'service temporarily unavailable. please try again later.';
+      }
       setSignupState(prev => ({
         ...prev,
-        error: 'network error. please try again.',
+        error: errorMessage,
         isLoading: false
       }));
     }
@@ -194,17 +205,15 @@ const Home = () => {
         }));
 
         if (data.shouldSignIn) {
-          setTimeout(async () => {
-            await signIn("credentials", {
-              email: fullEmail,
-              password: signupState.password,
-              redirect: false,
-            });
-          }, 1500);
-
-          setTimeout(() => {
-            window.location.href = '/profile';
-          }, 2000);
+          // Sign in and immediately redirect to onboarding (don't check status)
+          signIn("credentials", {
+            email: fullEmail,
+            password: signupState.password,
+            redirect: false,
+          }).then(() => {
+            // Always go to onboarding after signup
+            window.location.href = '/onboarding';
+          });
         }
       } else {
         setSignupState(prev => ({
@@ -307,8 +316,43 @@ const Home = () => {
           isLoading: false
         }));
 
-        setTimeout(() => {
-          window.location.href = '/profile';
+        // Check onboarding status before redirecting
+        setTimeout(async () => {
+          try {
+            // Check localStorage first (fallback for when MongoDB is unavailable)
+            const storedOnboarding = localStorage.getItem(`onboarding_${fullEmail}`);
+            if (storedOnboarding === 'true') {
+              console.log('[DEV MODE] Found onboarding status in localStorage');
+              window.location.href = '/profile';
+              return;
+            }
+
+            const userResponse = await fetch("/api/user");
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              const onboardingCompleted = userData.data?.profile?.onboardingCompleted;
+              
+              if (onboardingCompleted) {
+                // Store in localStorage as backup
+                localStorage.setItem(`onboarding_${fullEmail}`, 'true');
+                window.location.href = '/profile';
+              } else {
+                window.location.href = '/onboarding';
+              }
+            } else {
+              // If we can't check, go to onboarding to be safe
+              window.location.href = '/onboarding';
+            }
+          } catch (error) {
+            // Check localStorage as fallback even on error
+            const storedOnboarding = localStorage.getItem(`onboarding_${fullEmail}`);
+            if (storedOnboarding === 'true') {
+              window.location.href = '/profile';
+              return;
+            }
+            // If error, go to onboarding
+            window.location.href = '/onboarding';
+          }
         }, 1000);
       }
     } catch (error) {
@@ -327,25 +371,31 @@ const Home = () => {
           <div className="relative">
             <input
               type="text"
-              placeholder="sunetid"
+              placeholder={typeof window !== 'undefined' && window.location.hostname === 'localhost' ? "email or username" : "sunetid"}
               value={signupState.emailPrefix}
-              onChange={(e) =>
+              onChange={(e) => {
+                const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+                const value = isDev 
+                  ? e.target.value // Allow any input in dev mode
+                  : e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''); // Restrict in production
                 setSignupState(prev => ({
                   ...prev,
-                  emailPrefix: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''),
+                  emailPrefix: value,
                   error: ''
                 }))
-              }
-              className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900 pr-32"
+              }}
+              className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900"
               disabled={signupState.isLoading}
               style={{ fontFamily: 'Merriweather, serif' }}
             />
-            <span 
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
-              style={{ fontFamily: 'Merriweather, serif' }}
-            >
-              @stanford.edu
-            </span>
+            {typeof window === 'undefined' || window.location.hostname !== 'localhost' ? (
+              <span 
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+                style={{ fontFamily: 'Merriweather, serif' }}
+              >
+                @stanford.edu
+              </span>
+            ) : null}
           </div>
 
           <input
@@ -528,25 +578,31 @@ const Home = () => {
         <div className="relative">
           <input
             type="text"
-            placeholder="sunetid"
+            placeholder={typeof window !== 'undefined' && window.location.hostname === 'localhost' ? "email or username" : "sunetid"}
             value={loginState.emailPrefix}
-            onChange={(e) =>
+            onChange={(e) => {
+              const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+              const value = isDev 
+                ? e.target.value // Allow any input in dev mode
+                : e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''); // Restrict in production
               setLoginState(prev => ({
                 ...prev,
-                emailPrefix: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''),
+                emailPrefix: value,
                 error: ''
               }))
-            }
-            className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900 pr-32"
+            }}
+            className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-700 focus:border-transparent text-gray-900"
             disabled={loginState.isLoading}
             style={{ fontFamily: 'Merriweather, serif' }}
           />
-          <span 
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
-            style={{ fontFamily: 'Merriweather, serif' }}
-          >
-            @stanford.edu
-          </span>
+          {typeof window === 'undefined' || window.location.hostname !== 'localhost' ? (
+            <span 
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+              style={{ fontFamily: 'Merriweather, serif' }}
+            >
+              @stanford.edu
+            </span>
+          ) : null}
         </div>
 
         <input

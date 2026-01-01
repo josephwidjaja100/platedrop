@@ -43,7 +43,9 @@ export async function GET() {
             lookingForGender: [],
             lookingForEthnicity: [],
             optInMatching: false,
-            attractiveness: 0
+            attractiveness: 0,
+            onboardingCompleted: false,
+            adjectivePreferences: []
           },
           email: session.user.email
         }
@@ -54,18 +56,22 @@ export async function GET() {
       success: true,
       data: {
         _id: user._id,
-        profile: user.profile || {
-          name: session.user.name || '',
-          year: '',
-          major: '',
-          instagram: '',
-          photo: null,
-          gender: '',
-          ethnicity: [],
-          lookingForGender: [],
-          lookingForEthnicity: [],
-          optInMatching: false,
-          attractiveness: 0
+        profile: {
+          ...(user.profile || {
+            name: session.user.name || '',
+            year: '',
+            major: '',
+            instagram: '',
+            photo: null,
+            gender: '',
+            ethnicity: [],
+            lookingForGender: [],
+            lookingForEthnicity: [],
+            optInMatching: false,
+            attractiveness: 0
+          }),
+          onboardingCompleted: user.profile?.onboardingCompleted || false,
+          adjectivePreferences: user.profile?.adjectivePreferences || []
         },
         email: user.email || session.user.email
       }
@@ -73,12 +79,17 @@ export async function GET() {
 
   } catch (error) {
     console.error('error fetching user profile:', error);
+    const errorMessage = error instanceof Error ? error.message : 'internal server error';
     return NextResponse.json(
-      { error: 'internal server error' },
+      { error: errorMessage },
       { status: 500 }
     );
   } finally {
-    await client.close();
+    try {
+      await client.close();
+    } catch (closeError) {
+      // Ignore close errors - connection might already be closed
+    }
   }
 }
 
@@ -109,6 +120,8 @@ export async function PUT(request: NextRequest) {
         lookingForEthnicity: JSON.parse(formData.get('lookingForEthnicity') as string || '[]'),
         optInMatching: formData.get('optInMatching') === 'true',
         attractiveness: parseInt(formData.get('attractiveness') as string || '0', 10),
+        onboardingCompleted: formData.get('onboardingCompleted') === 'true',
+        adjectivePreferences: JSON.parse(formData.get('adjectivePreferences') as string || '[]'),
       };
 
       imageFile = formData.get('photo') as File;
@@ -122,7 +135,41 @@ export async function PUT(request: NextRequest) {
       requestData = await request.json();
     }
 
-    // Server-side validation
+    // Check if this is an onboarding-only request (before validation)
+    const isOnboardingOnly = requestData.onboardingCompleted !== undefined && 
+                             Object.keys(requestData).filter(k => k !== 'onboardingCompleted' && k !== 'adjectivePreferences').length === 0;
+
+    // For onboarding-only requests, skip validation
+    if (isOnboardingOnly) {
+      await client.connect();
+      const db = client.db('platedrop');
+      const usersCollection = db.collection('users');
+      
+      await usersCollection.updateOne(
+        { email: session.user.email },
+        { 
+          $set: {
+            'profile.onboardingCompleted': requestData.onboardingCompleted,
+            'profile.adjectivePreferences': requestData.adjectivePreferences || [],
+            updatedAt: new Date()
+          }
+        },
+        { upsert: true }
+      );
+      
+      return NextResponse.json({
+        success: true,
+        message: 'onboarding completed',
+        data: { 
+          profile: {
+            onboardingCompleted: requestData.onboardingCompleted,
+            adjectivePreferences: requestData.adjectivePreferences || []
+          }
+        }
+      });
+    }
+
+    // For regular profile updates, do validation
     const validation = validateProfileDataWithImage(requestData, imageFile);
     if (!validation.isValid) {
       console.error('validation failed:', validation.error);
@@ -133,9 +180,13 @@ export async function PUT(request: NextRequest) {
     const validData = validation.validData!;
     const validImage = validation.validImage;
 
+    // Connect to MongoDB for regular updates
+    let db;
+    let usersCollection;
+    
     await client.connect();
-    const db = client.db('platedrop');
-    const usersCollection = db.collection('users');
+    db = client.db('platedrop');
+    usersCollection = db.collection('users');
 
     // Structure data according to User interface
     const profileUpdate: { [key: string]: any } = {
@@ -152,6 +203,14 @@ export async function PUT(request: NextRequest) {
       attractiveness: validData.attractiveness
     };
 
+    // Handle onboarding fields if provided (from JSON requests)
+    if (requestData.onboardingCompleted !== undefined) {
+      profileUpdate.onboardingCompleted = requestData.onboardingCompleted;
+    }
+    if (requestData.adjectivePreferences !== undefined) {
+      profileUpdate.adjectivePreferences = requestData.adjectivePreferences;
+    }
+
     // Handle profile image upload
     if (validImage) {
       try {
@@ -162,7 +221,6 @@ export async function PUT(request: NextRequest) {
         );
         
         profileUpdate.photo = blob.url;
-        // console.log(`profile image uploaded to vercel blob: ${blob.url}`);
       } catch (error) {
         console.error('error uploading profile image to vercel blob:', error);
         return NextResponse.json({ error: 'failed to upload profile image to storage' }, { status: 500 });

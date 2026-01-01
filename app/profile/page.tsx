@@ -177,7 +177,13 @@ const Profile = () => {
         const data = result.data;
 
         if (data?.profile) {
-          const profileData = {
+          // Check if onboarding is completed
+          if (!data.profile.onboardingCompleted) {
+            window.location.href = '/onboarding';
+            return;
+          }
+
+          const profileData: ProfileData = {
             name: data.profile.name || '',
             year: data.profile.year || '',
             major: data.profile.major || '',
@@ -188,7 +194,7 @@ const Profile = () => {
             lookingForGender: data.profile.lookingForGender || [],
             lookingForEthnicity: data.profile.lookingForEthnicity || [],
             attractiveness: data.profile.attractiveness || 0,
-            optInMatching: data.profile.optInMatching || false
+            optInMatching: data.profile.optInMatching || false,
           };
           setProfile(profileData);
         }
@@ -325,21 +331,21 @@ const Profile = () => {
 
       const result = await response.json();
       
-      if (result.data?.profile) {
-        setProfile({
-          name: result.data.profile.name || '',
-          year: result.data.profile.year || '',
-          major: result.data.profile.major || '',
-          instagram: result.data.profile.instagram || '',
-          photo: result.data.profile.photo || null,
-          gender: result.data.profile.gender || '',
-          ethnicity: result.data.profile.ethnicity || [],
-          lookingForGender: result.data.profile.lookingForGender || [],
-          lookingForEthnicity: result.data.profile.lookingForEthnicity || [],
-          attractiveness: result.data.profile.attractiveness || 0,
-          optInMatching: result.data.profile.optInMatching || false
-        });
-      }
+        if (result.data?.profile) {
+          setProfile({
+            name: result.data.profile.name || '',
+            year: result.data.profile.year || '',
+            major: result.data.profile.major || '',
+            instagram: result.data.profile.instagram || '',
+            photo: result.data.profile.photo || null,
+            gender: result.data.profile.gender || '',
+            ethnicity: result.data.profile.ethnicity || [],
+            lookingForGender: result.data.profile.lookingForGender || [],
+            lookingForEthnicity: result.data.profile.lookingForEthnicity || [],
+            attractiveness: result.data.profile.attractiveness || 0,
+            optInMatching: result.data.profile.optInMatching || false
+          });
+        }
 
       if (shouldAnalyze && result.data?.profile?.photo) {
         toast.info("analyzing your photo...");
@@ -861,6 +867,7 @@ const Profile = () => {
             onCancel={handlePhotoEditorCancel}
           />
         )}
+
 
         <style>{`
           @supports (padding: max(0px)) {

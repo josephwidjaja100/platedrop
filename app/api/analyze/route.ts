@@ -17,31 +17,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'image url is required' }, { status: 400 });
     }
     
-    // Fetch the image and convert to blob
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error('failed to fetch image from url');
-    }
+    // Fetch user's preference array from database
+    await client.connect();
+    const db = client.db('platedrop');
+    const usersCollection = db.collection('users');
     
-    const imageBlob = await imageResponse.blob();
+    const user = await usersCollection.findOne({ email: session.user.email });
+    const adjectivePreferences = user?.profile?.adjectivePreferences || [];
+    
+    console.log('User preferences for analysis:', adjectivePreferences);
+    
+    // Handle image URL (base64 data URLs or regular URLs)
+    let imageBlob: Blob;
+    
+    if (imageUrl.startsWith('data:')) {
+      // Base64 data URL - convert directly to blob
+      const base64Data = imageUrl.split(',')[1];
+      const mimeType = imageUrl.match(/data:([^;]+);/)?.[1] || 'image/jpeg';
+      const buffer = Buffer.from(base64Data, 'base64');
+      imageBlob = new Blob([buffer], { type: mimeType });
+    } else {
+      // Regular URL - fetch it
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error('failed to fetch image from url');
+      }
+      imageBlob = await imageResponse.blob();
+    }
     
     const model = await Client.connect("jwidhaha/looksmatr");
     const result = await model.predict(
       "/analyze", {
         image: imageBlob,
         identifier: "person",
+        preferences: adjectivePreferences, // Send the preference array to the AI
     });
     
     // Extract attractiveness score from the result
-    // The result should be in beautyResult.data array
     const attractiveness = parseFloat((result.data as string[])[0]) || 0;
-    
     console.log('Extracted attractiveness score:', attractiveness);
+    console.log('Preferences sent to AI:', adjectivePreferences);
 
-    // Connect to MongoDB and update user profile
-    await client.connect();
-    const db = client.db('platedrop');
-    const usersCollection = db.collection('users');
+    // Update user profile (client already connected above)
 
     // Update user with composite attractiveness score
     const updateResult = await usersCollection.updateOne(
