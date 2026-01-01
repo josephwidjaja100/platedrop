@@ -8,7 +8,6 @@ import Onboarding from '@/components/Onboarding';
 
 const OnboardingPage = () => {
   const { data: session, status } = useSession();
-  const useRouter1 = useRouter();
   const router = useRouter();
 
   useEffect(() => {
@@ -16,6 +15,8 @@ const OnboardingPage = () => {
       router.push('/');
       return;
     }
+
+    // No need to check status - just show onboarding if authenticated
   }, [status, session, router]);
 
   const handleOnboardingComplete = async (selections: string[]) => {
@@ -49,47 +50,15 @@ const OnboardingPage = () => {
   };
 
   if (status === "loading") {
-    return null; 
+    return null; // Don't show anything while session loads
   }
 
   if (status === "unauthenticated") {
-    return null; 
+    return null; // Will redirect
   }
 
-  return (
-    <>
-      {/* 1. Add the font used in other pages */}
-      <link 
-        href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" 
-        rel="stylesheet" 
-      />
-
-      {/* 2. Add the styles manually here */}
-      <style>{`
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        
-        .bg-gradient-animated {
-          background: linear-gradient(135deg, #dbeafe, #e9d5ff, #fae8ff, #ddd6fe, #bfdbfe);
-          background-size: 400% 400%;
-          animation: gradientShift 15s ease infinite;
-        }
-      `}</style>
-
-      {/* 3. Wrap the Onboarding component in the gradient div */}
-      <div 
-        className="fixed inset-0 bg-gradient-animated overflow-y-auto"
-        style={{ fontFamily: 'Merriweather, serif' }}
-      >
-        <div className="min-h-full w-full flex flex-col items-center justify-center p-4">
-          <Onboarding onComplete={handleOnboardingComplete} />
-        </div>
-      </div>
-    </>
-  );
+  return <Onboarding onComplete={handleOnboardingComplete} />;
 };
 
 export default OnboardingPage;
+
