@@ -51,15 +51,7 @@ export const createUser = async (options: CreateUserOptions): Promise<User> => {
 };
 
 export const createOrUpdateUser = async (options: CreateUserOptions): Promise<{ user: User; isNew: boolean }> => {
-    try {
-        // Check if already connected, if not connect
-        if (!client.topology || !client.topology.isConnected()) {
-            await client.connect();
-        }
-    } catch (error) {
-        // If connection fails, try to connect anyway
-        await client.connect();
-    }
+    await client.connect();
     
     const db = client.db('platedrop');
     const usersCollection = db.collection('users');
@@ -114,15 +106,7 @@ export const createOrUpdateUser = async (options: CreateUserOptions): Promise<{ 
 };
 
 export const getUserByEmail = async (email: string): Promise<User | null> => {
-    try {
-        // Check if already connected, if not connect
-        if (!client.topology || !client.topology.isConnected()) {
-            await client.connect();
-        }
-    } catch (error) {
-        // If connection fails, try to connect anyway
-        await client.connect();
-    }
+    await client.connect();
     
     const db = client.db('platedrop');
     const usersCollection = db.collection('users');
