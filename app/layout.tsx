@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "looksmatr",
-  description: "get matched with people who are as hot as you",
+  title: "likely",
+  description: "get matched with people who are as attractive as you",
 };
 
 export default function RootLayout({

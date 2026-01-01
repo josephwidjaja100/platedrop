@@ -7,11 +7,11 @@ import { sanitizeEmail } from '@/lib/auth-utils';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendOTPEmail = async (email: string, otpCode: string, type: 'signup' | 'password-reset' = 'signup') => {
-  const subject = type === 'signup' ? 'complete your looksmatr account setup' : 'reset your password';
+  const subject = type === 'signup' ? 'complete your likely account setup' : 'reset your password';
   
   try {
     const { data, error } = await resend.emails.send({
-      from: 'looksmatr <onboarding@resend.dev>',
+      from: 'likely <onboarding@likely.one>',
       to: [email],
       subject,
       react: OtpChatEmail({
@@ -48,7 +48,7 @@ export const sendMatchEmail = async (
 ) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'looksmatr <onboarding@resend.dev>',
+      from: 'likely <match@likely.one>',
       to: [email],
       subject: 'you have a new match! 💘',
       react: MatchingEmail({
@@ -79,7 +79,7 @@ export const sendMatchEmail = async (
 export const sendNoMatchEmail = async (email: string, userName: string = 'there') => {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'looksmatr <onboarding@resend.dev>',
+      from: 'likely <match@likely.one>',
       to: [email],
       subject: 'we got some bad news for you 😬',
       react: NoMatchEmail({ name: userName }),

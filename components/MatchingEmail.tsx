@@ -103,7 +103,7 @@ export default function MatchingEmail({
                 }}
               />
               <Text style={{ margin: '0', color: '#94a3b8', fontSize: '14px', fontFamily: 'Georgia, "Times New Roman", serif' }}>
-                looksmatr
+                likely
               </Text>
             </td>
           </tr>
@@ -435,8 +435,8 @@ export default function MatchingEmail({
             fontFamily: 'Georgia, "Times New Roman", serif',
           }}
         >
-          <a href="https://looksmatr.com" style={{ color: '#6b7280', textDecoration: 'none' }}>
-            visit looksmatr.com
+          <a href="https://likely.one" style={{ color: '#6b7280', textDecoration: 'none' }}>
+            visit likely.one
           </a>
         </Text>
         <Text

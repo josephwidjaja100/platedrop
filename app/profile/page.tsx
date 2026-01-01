@@ -418,6 +418,7 @@ const Profile = () => {
       const result = reader.result as string | null;
       setEditValues({
         ...editValues,
+        attractiveness: 0,
         photo: result
       });
     };
@@ -502,7 +503,7 @@ const Profile = () => {
             <p className="text-base">
               <span className="text-gray-800">@</span>
               <span className={profile.instagram ? 'text-gray-800' : 'text-gray-400'}>
-                {profile.instagram || 'looks.matr'}
+                {profile.instagram || 'likely.one'}
               </span>
             </p>
           );
