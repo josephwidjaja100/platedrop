@@ -54,6 +54,11 @@ export const sendMatchEmail = async (
     attractivenessDiff: number;
   }
 ) => {
+  if (!resend) {
+    console.warn('Resend API key not set. Skipping email sending.');
+    return { success: false, error: 'Email service not configured' };
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: 'looksmatr <onboarding@resend.dev>',
@@ -85,6 +90,11 @@ export const sendMatchEmail = async (
 };
 
 export const sendNoMatchEmail = async (email: string, userName: string = 'there') => {
+  if (!resend) {
+    console.warn('Resend API key not set. Skipping email sending.');
+    return { success: false, error: 'Email service not configured' };
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: 'looksmatr <onboarding@resend.dev>',
