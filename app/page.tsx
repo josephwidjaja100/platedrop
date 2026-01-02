@@ -4,9 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { signIn } from "next-auth/react";
 
 // Map subdomains to their email domains and display names
-const SUBDOMAIN_CONFIG: Record<string, { emailDomain: string; displayName: string; url: string }> = {
-  'stanford': { emailDomain: 'stanford.edu', displayName: 'Stanford', url: 'https://stanford.likely.one' },
-  'psu': { emailDomain: 'psu.edu', displayName: 'Penn State', url: 'https://psu.likely.one' },
+const SUBDOMAIN_CONFIG: Record<string, { emailDomain: string; displayName: string; url: string; active: boolean }> = {
+  'stanford': { emailDomain: 'stanford.edu', displayName: 'Stanford', url: 'https://stanford.likely.one', active: false },
+  'psu': { emailDomain: 'psu.edu', displayName: 'Penn State', url: 'https://psu.likely.one', active: true },
 };
 
 // Get list of college options for dropdown
@@ -15,8 +15,9 @@ const getCollegeOptions = () => {
 };
 
 const Home = () => {
-  const [emailDomain, setEmailDomain] = useState('stanford.edu');
-  const [collegeName, setCollegeName] = useState('Stanford');
+  const [emailDomain, setEmailDomain] = useState('psu.edu');
+  const [collegeName, setCollegeName] = useState('Penn State');
+  const [isActive, setIsActive] = useState(true);
   const [selectedCollege, setSelectedCollege] = useState('');
   const [showAuth, setShowAuth] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -54,10 +55,12 @@ const Home = () => {
     if (config) {
       setEmailDomain(config.emailDomain);
       setCollegeName(config.displayName);
+      setIsActive(config.active);
     } else {
-      // Default to stanford if subdomain not found
-      setEmailDomain('stanford.edu');
-      setCollegeName('Stanford');
+      // Default to psu if subdomain not found
+      setEmailDomain('psu.edu');
+      setCollegeName('Penn State');
+      setIsActive(true);
     }
   }, []);
 
@@ -116,7 +119,9 @@ const Home = () => {
   ];
 
   const handleGetMatched = () => {
-    setShowAuth(true);
+    if (isActive) {
+      setShowAuth(true);
+    }
   };
 
   const handleCloseAuth = () => {
@@ -725,10 +730,15 @@ const Home = () => {
           <div className="mt-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
             <button
               onClick={handleGetMatched}
-              className="px-8 py-4 bg-gray-800 text-white font-bold rounded-full hover:bg-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+              disabled={!isActive}
+              className={`px-8 py-4 font-bold rounded-full transition-all duration-300 shadow-lg ${
+                isActive 
+                  ? 'bg-gray-800 text-white hover:bg-gray-700 hover:shadow-xl hover:scale-105 cursor-pointer' 
+                  : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+              }`}
               style={{ fontFamily: 'Merriweather, serif' }}
             >
-              get matched
+              {isActive ? 'get matched' : 'coming soon...'}
             </button>
 
             <div ref={dropdownRef} className="relative flex flex-col items-center sm:items-start">
