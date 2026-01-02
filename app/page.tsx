@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react";
 
 // Map subdomains to their email domains and display names
 const SUBDOMAIN_CONFIG: Record<string, { emailDomain: string; displayName: string; url: string; active: boolean }> = {
-  'stanford': { emailDomain: 'stanford.edu', displayName: 'Stanford', url: 'https://stanford.likely.one', active: false },
+  'stanford': { emailDomain: 'stanford.edu', displayName: 'Stanford', url: 'https://stanford.likely.one', active: true },
   'psu': { emailDomain: 'psu.edu', displayName: 'Penn State', url: 'https://psu.likely.one', active: true },
 };
 
@@ -401,7 +401,7 @@ const Home = () => {
           <div className="relative">
             <input
               type="text"
-              placeholder="sunetid"
+              placeholder="email"
               value={signupState.emailPrefix}
               onChange={(e) =>
                 setSignupState(prev => ({
