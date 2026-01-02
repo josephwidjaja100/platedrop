@@ -763,7 +763,14 @@ const Home = () => {
               {showDropdown && (
                 <div 
                   onClick={(e) => e.stopPropagation()}
-                  className="absolute top-full left-0 mt-1 w-64 bg-white border-2 border-gray-400/40 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50"
+                  className="absolute top-full mt-1 bg-white border-2 border-gray-400/40 rounded-lg shadow-xl max-h-60 overflow-y-auto z-50"
+                  style={{ 
+                    left: '-1px',
+                    width: dropdownRef.current?.querySelector('button')?.offsetWidth 
+                      ? `${dropdownRef.current.querySelector('button')?.offsetWidth}px` 
+                      : 'auto',
+                    minWidth: 'max-content'
+                  }}
                 >
                   {getCollegeOptions().map((option) => (
                     <button
@@ -773,7 +780,7 @@ const Home = () => {
                         e.stopPropagation();
                         handleCollegeChange(option);
                       }}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition-colors text-sm text-gray-700 first:rounded-t-lg last:rounded-b-lg"
+                      className="w-full px-4 py-3 text-left hover:bg-gray-100 transition-colors text-sm text-gray-700 first:rounded-t-lg last:rounded-b-lg whitespace-nowrap"
                       style={{ fontFamily: 'Merriweather, serif' }}
                     >
                       {option}
