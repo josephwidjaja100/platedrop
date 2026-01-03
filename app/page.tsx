@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 
 // Map subdomains to their email domains and display names
 const SUBDOMAIN_CONFIG: Record<string, { emailDomain: string; displayName: string; url: string; active: boolean }> = {
+  'winchester': { emailDomain: 'winchesterthurston.org', displayName: 'Winchester Thurston', url: 'https://winchester.likely.one', active: true},
   'stanford': { emailDomain: 'stanford.edu', displayName: 'Stanford', url: 'https://stanford.likely.one', active: true },
   'psu': { emailDomain: 'psu.edu', displayName: 'Penn State', url: 'https://psu.likely.one', active: true },
 };
