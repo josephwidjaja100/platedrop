@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { signIn } from "next-auth/react";
+import Link from 'next/link';
 
 const Home = () => {
   const [showAuth, setShowAuth] = useState(false);
@@ -444,6 +445,12 @@ const Home = () => {
           >
             {signupState.isLoading ? 'sending...' : 'send verification code'}
           </button>
+          <p className="text-xs text-gray-500 text-center" style={{ fontFamily: 'Merriweather, serif' }}>
+            by continuing, you agree that you are 18+ and agree to our{' '}
+            <Link href="/legal/tos" className="underline hover:text-gray-700">Terms of Service</Link>
+            {' '}and{' '}
+            <Link href="/legal/privacy" className="underline hover:text-gray-700">Privacy Policy</Link>
+          </p>
         </div>
       );
     }
@@ -542,6 +549,12 @@ const Home = () => {
           >
             {signupState.isLoading ? 'creating account...' : 'create account'}
           </button>
+          <p className="text-xs text-gray-500 text-center" style={{ fontFamily: 'Merriweather, serif' }}>
+            by continuing, you agree that you are 18+ and agree to our{' '}
+            <Link href="/legal/tos" className="underline hover:text-gray-700">Terms of Service</Link>
+            {' '}and{' '}
+            <Link href="/legal/privacy" className="underline hover:text-gray-700">Privacy Policy</Link>
+          </p>
           <div className="flex flex-col space-y-2">
             <button
               onClick={handleResendOTP}
