@@ -11,7 +11,7 @@ export const sendOTPEmail = async (email: string, otpCode: string, type: 'signup
   
   try {
     const { data, error } = await resend.emails.send({
-      from: 'likely <onboarding@likely.one>',
+      from: 'likely <onboarding@auth.likely.one>',
       to: [email],
       subject,
       react: OtpChatEmail({
