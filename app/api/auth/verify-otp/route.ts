@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
       expiresAt: { $gt: new Date() }
     });
 
+    console.log("OTP document found:", !!otpDoc);
+
     if (!otpDoc) {
       return NextResponse.json(
         { success: false, message: 'invalid or expired verification code' },

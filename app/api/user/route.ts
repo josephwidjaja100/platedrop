@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import client from '@/lib/db';
 import { validateProfileDataWithImage } from '@/lib/validation/userProfile-validation';
 import { put } from '@vercel/blob';
-
+ 
 export async function GET() {
   try {
     const session = await auth();
@@ -53,11 +53,10 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      success: true,
-      data: {
-        _id: user._id,
-        profile: {
-          ...(user.profile || {
+        success: true,
+        data: {
+          _id: user._id,
+          profile: user.profile || {
             name: session.user.name || '',
             year: '',
             major: '',
@@ -69,27 +68,21 @@ export async function GET() {
             lookingForEthnicity: [],
             optInMatching: false,
             attractiveness: 0
-          }),
+          },
           onboardingCompleted: user.profile?.onboardingCompleted || false,
-          adjectivePreferences: user.profile?.adjectivePreferences || []
+          adjectivePreferences: user.profile?.adjectivePreferences || [],
+          email: user.email || session.user.email
         },
-        email: user.email || session.user.email
-      }
     });
 
   } catch (error) {
     console.error('error fetching user profile:', error);
-    const errorMessage = error instanceof Error ? error.message : 'internal server error';
     return NextResponse.json(
-      { error: errorMessage },
+      { error: 'internal server error' },
       { status: 500 }
     );
   } finally {
-    try {
-      await client.close();
-    } catch (closeError) {
-      // Ignore close errors - connection might already be closed
-    }
+    await client.close();
   }
 }
 
@@ -135,7 +128,6 @@ export async function PUT(request: NextRequest) {
       requestData = await request.json();
     }
 
-    // Check if this is an onboarding-only request (before validation)
     const isOnboardingOnly = requestData.onboardingCompleted !== undefined && 
                              Object.keys(requestData).filter(k => k !== 'onboardingCompleted' && k !== 'adjectivePreferences').length === 0;
 

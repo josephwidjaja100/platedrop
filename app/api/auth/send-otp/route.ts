@@ -148,14 +148,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('error sending OTP:', error);
     return NextResponse.json(
-      { success: false, message: 'service temporarily unavailable. please try again later.' },
+      { success: false, message: 'internal server error' },
       { status: 500 }
     );
   } finally {
-    try {
-      await client.close();
-    } catch (closeError) {
-      // Ignore close errors
-    }
+    await client.close();
   }
 }
