@@ -19,7 +19,7 @@ export default function PrivacyPolicy() {
           paddingRight: 'max(0px, env(safe-area-inset-right))'
         }}
       >
-        <div className="bg-white/60 backdrop-blur-md rounded-2xl border-2 border-gray-300 shadow-2xl w-full max-w-4xl p-8 md:p-12 max-h-[90vh] overflow-y-auto">
+        <div className="bg-white/60 backdrop-blur-md rounded-none md:rounded-2xl border-2 border-gray-300 shadow-2xl w-full max-w-4xl p-8 md:p-12 max-h-[90vh] overflow-y-auto">
           <div className="mb-8">
             <h1
               className="text-4xl md:text-5xl font-bold text-gray-900 mb-2"
