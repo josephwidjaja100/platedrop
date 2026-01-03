@@ -10,8 +10,16 @@ export default function PrivacyPolicy() {
         href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap"
         rel="stylesheet"
       />
-      <div className="min-h-screen bg-gradient-animated flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8 md:p-12 max-h-[90vh] overflow-y-auto">
+      <div 
+        className="absolute inset-0 flex flex-col items-center justify-center px-4 overflow-hidden bg-gradient-animated" 
+        style={{ 
+          paddingTop: 'max(0px, env(safe-area-inset-top))', 
+          paddingBottom: 'max(0px, env(safe-area-inset-bottom))', 
+          paddingLeft: 'max(0px, env(safe-area-inset-left))', 
+          paddingRight: 'max(0px, env(safe-area-inset-right))'
+        }}
+      >
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl border-2 border-gray-300 shadow-2xl w-full max-w-4xl p-8 md:p-12 max-h-[90vh] overflow-y-auto">
           <div className="mb-8">
             <h1
               className="text-4xl md:text-5xl font-bold text-gray-900 mb-2"
@@ -135,10 +143,17 @@ export default function PrivacyPolicy() {
 
       <style>{`
         @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
         }
+        
         .bg-gradient-animated {
           background: linear-gradient(135deg, #dbeafe, #e9d5ff, #fae8ff, #ddd6fe, #bfdbfe);
           background-size: 400% 400%;
