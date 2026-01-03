@@ -10,7 +10,15 @@ export default function PrivacyPolicy() {
         href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap"
         rel="stylesheet"
       />
-      <div className="min-h-screen bg-gradient-animated flex items-center justify-center p-4">
+      <div 
+        className="absolute inset-0 flex flex-col items-center justify-center px-4 overflow-hidden bg-gradient-animated" 
+        style={{ 
+          paddingTop: 'max(0px, env(safe-area-inset-top))', 
+          paddingBottom: 'max(0px, env(safe-area-inset-bottom))', 
+          paddingLeft: 'max(0px, env(safe-area-inset-left))', 
+          paddingRight: 'max(0px, env(safe-area-inset-right))'
+        }}
+      >
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-8 md:p-12 max-h-[90vh] overflow-y-auto">
           <div className="mb-8">
             <h1
