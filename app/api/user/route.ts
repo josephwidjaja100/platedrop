@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import client from '@/lib/db';
 import { validateProfileDataWithImage } from '@/lib/validation/userProfile-validation';
 import { put } from '@vercel/blob';
-
+ 
 export async function GET() {
   try {
     const session = await auth();
